@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Street View Controls</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDfnB2Y-7gknrP8F2npzaX6GjhOkhHqwJE&libraries=&v=weekly" defer></script>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #street-view {
+      height: 100%;
+    }
+  </style>
+  <script>
+    var panorama;
+    var exporter;
+    console.log("hola");
+
+    function initialize() {
+      panorama = new google.maps.StreetViewPanorama(
+        document.getElementById("street-view"), {
+          position: {
+          
+            lat: 41.3735485,
+            lng: 2.1215157
+          },
+          pov: {
+            heading: 165,
+            pitch: 0
+          },
+          zoom: 1,
+        }
+      );
+      window.hola = panorama;
+      //  console.log(JSON.stringifyWithCircularRefs(panorama));
+
+      console.log(panorama);
+
+      exporter = Object.values(panorama);
+      seen = [];
+      json = JSON.stringify(exporter, function(key, val) {
+        if (typeof val == "object") {
+          if (seen.indexOf(val) >= 0)
+            return
+          seen.push(val)
+        }
+        return val
+      })
+
+
+
+      //exporter = Object.entries(exporter[0]);
+      console.log(exporter);
+    }
+    console.log("adios");
+    setTimeout(function() {
+      initialize()
+    }, 1000);
+  </script>
+</head>
+
+<body>
+  <div id="street-view"></div>
+</body>
+
+</html>
