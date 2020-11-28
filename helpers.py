@@ -11,7 +11,7 @@ class helpers():
         end=86400000 #a day in milis
         block=end/splitblocks
         duration=(end-daybeginMS)-(end-start)
-        needleE=(duration)/2
+        needleE=start-daybeginMS#(duration)/2
 
 
         for b in range(splitblocks):
@@ -23,3 +23,36 @@ class helpers():
                 return b
 
         return splitblocks-1
+
+    def spreadBlocks(self,blocks,last):
+        print("UNALTERED BLOCKS",blocks)
+        spreaded=[]
+        for i,b in enumerate(blocks):
+            if i==0 and not b:
+                #first block is empty
+                spreaded.append(last)
+            if i==0 and b:
+                spreaded.append(b)
+
+            if i>0 and not b:
+                spreaded.append(last)
+
+            if i>0 and b:
+                spreaded.append(b)
+
+            last=spreaded[i]
+
+        return spreaded
+
+    def validDayblocks(self,dayblocks):
+
+        for b in dayblocks:
+
+            if b is False:
+                return False
+            else:
+                return True
+                if b["type"] is None:
+                    return False
+
+        return True

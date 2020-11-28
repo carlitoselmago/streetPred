@@ -5,6 +5,7 @@ import csv
 import glob
 import sys
 import pandas as pd
+import numpy as np
 
 from helpers import helpers
 
@@ -19,7 +20,7 @@ end HYPERPARAMETERS:
 
 H=helpers()
 
-limit=100
+limit=0
 
 #load cats from google sheet
 catLocationsURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vShw1idYHeOZpKT0w10zHVUkbBEQU_a7E4w2qlBSPN7hNr3QpV2M_r5L3Bs3_Jw5_AlvSpBx8GGuoyP/pub?output=csv'
@@ -47,8 +48,11 @@ day=datetime.fromtimestamp(0).date()
 fecha=False
 
 dayBlocks= [None] * _DAYSPLIT
+lastBlock=False
 
 defaultActivityType="Stu"
+
+TRAINBLOCKS=[]
 
 for i,p in enumerate(datas):
 
@@ -60,17 +64,37 @@ for i,p in enumerate(datas):
             print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
             print("")
 
+            #DAY BLOCK :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+            dayBlocks=H.spreadBlocks(dayBlocks,lastBlock)
             print("¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿")
             print ("dayBlocks",dayBlocks)
             print("¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿")
             print("")
 
+            if H.validDayblocks(dayBlocks):
+                TRAINBLOCKS.append(dayBlocks)
+
+            lastBlock=dayBlocks[-1]
             #reset dayblock
             dayBlocks= [None] * _DAYSPLIT
 
-            if diasentre>1:
+            if diasentre>0:
                 if diasentre<10:
                     for dias in range(diasentre):
+
+                        #ADD STAY HOME BLOCK
+
+                        emptyDay=[None] * _DAYSPLIT
+                        for ds in range(_DAYSPLIT):
+                            lastAct=lastBlock#TRAINBLOCKS[-1][-1]
+                            if ds==0:
+                                #first block
+                                lastAct["dayofweek"]=lastAct["dayofweek"]+1
+                                lastAct["dayofmonth"]=lastAct["dayofmonth"]+1
+                            lastAct["timeblock"]=ds
+                            lastAct["name"]="::::REST DAY::::"
+                            emptyDay[ds]=lastAct
+                        TRAINBLOCKS.append(emptyDay)
 
                         print("STAYHOMA!")
                         print("")
@@ -104,9 +128,18 @@ for i,p in enumerate(datas):
             print("daysplitIndex",daysplitIndex,"%%%%%%%%%%%%%%%%%%")
             print("")
 
-            actT=defaultActivityType
+            actT=None#defaultActivityType
 
-            activity={"type":actT,"duration":duration,"name":placeName}
+            actTDB=catLocations.loc[catLocations["id"]==placeID]["cat"].values[0]
+            if not pd.isnull(actTDB):
+                actT=actTDB
+
+            dayofweek=fechaTiempo.weekday()
+            month=fechaTiempo.month
+            year=fechaTiempo.year
+            dayofmonth=fechaTiempo.day
+
+            activity={"type":actT,"duration":duration,"name":placeName,"placeid":placeID,"dayofmonth":dayofmonth,"dayofweek":dayofweek,"month":month,"year":year,"lat":p["location"]["latitudeE7"]/ 1e7,"lon":p["location"]["longitudeE7"]/ 1e7}
 
             try:
                 if duration>dayBlocks[daysplitIndex]["duration"]:
@@ -125,8 +158,9 @@ for i,p in enumerate(datas):
         except:
             pass
 
-        if i>limit:
-            break
+        if limit>0:
+            if i>limit:
+                break
 
 #print(places)
 placesCSV=[]
@@ -146,9 +180,37 @@ for id in places:
     placesCSV.append(place)
 #print(placesCSV)
 
-f = open("data/history.csv", "w",encoding='utf-8',newline='')
+f = open("data/PARSED/placeshistory.csv", "w",encoding='utf-8',newline='')
 writer = csv.DictWriter(
     f, fieldnames=["id", "latitudeE7","longitudeE7","address","name"])
 writer.writeheader()
 writer.writerows(placesCSV)
 f.close()
+
+
+##### WRITE TRAIN DATA
+print("")
+print("END:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+
+INDBLOCKS=[]
+
+for tb in TRAINBLOCKS:
+    for i,b in enumerate(tb):
+        bb=b
+        bb["timeblock"]=i
+
+        if len(INDBLOCKS)>2:
+            if bb["timeblock"]==0 and bb["dayofweek"]==INDBLOCKS[i-1]["dayofweek"]:
+                bb["dayofweek"]+=1
+        INDBLOCKS.append(bb)
+        print (bb)
+
+print("")
+print("TRAINBLOCKS")
+df = pd.DataFrame(INDBLOCKS)
+
+#drop rows wich dont have a type category
+df.dropna(subset=['type'], inplace=True)
+
+print(df)
+df.to_csv('data/PARSED/traindata.csv',index=False)
