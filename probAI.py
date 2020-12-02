@@ -32,7 +32,7 @@ class probAI():
 
     lookbackLSTM=12
     batchSize=3
-    epochs=10
+    epochs=1
 
     def __init__(self):
         print("::::::::::::::::::::::")
@@ -44,123 +44,81 @@ class probAI():
 
         y_col=targetCol
 
-        test_size = int(len(df) * 0.1) # the test data will be 10% (0.1) of the entire data
-        train = df.iloc[:-test_size,:].copy()
-        # the copy() here is important, it will prevent us from getting: SettingWithCopyWarning: A value is trying to be set on a copy of a slice from a DataFrame. Try using .loc[row_index,col_indexer] = value instead
+        test_size = int(len(df) * 0.1) # here I ask that the test data will be 10% (0.1) of the entire data
+        train = df.iloc[:-test_size,:].copy() # the copy() here is important, it will prevent us from getting: SettingWithCopyWarning: A value is trying to be set on a copy of a slice from a DataFrame.
+        # Try using .loc[row_index,col_indexer] = value instead
         test = df.iloc[-test_size:,:].copy()
-        print(train.shape, test.shape)
 
-        #separate X and y only for the train data (for now)
+
         X_train = train.drop(y_col,axis=1).copy()
-        y_train = train[[y_col]].copy() # the double brakets here are to keep the y in a dataframe format, otherwise it will be pandas Series
-        print(X_train.shape, y_train.shape)
-
-        print("*********************************************************************************")
-
-        X_train=X_train.to_numpy()
-        y_train=y_train.to_numpy()
-        print(X_train, y_train)
+        y_train = train[[y_col]].copy() # the double brakets here are to keep the y in dataframe format, otherwise it will be pandas Series
 
         Xscaler = MinMaxScaler(feature_range=(0, 1)) # scale so that all the X data will range from 0 to 1
         Xscaler.fit(X_train)
         scaled_X_train = Xscaler.transform(X_train)
-        print(X_train.shape)
         Yscaler = MinMaxScaler(feature_range=(0, 1))
         Yscaler.fit(y_train)
         scaled_y_train = Yscaler.transform(y_train)
-        print(scaled_y_train.shape)
         scaled_y_train = scaled_y_train.reshape(-1) # remove the second dimention from y so the shape changes from (n,1) to (n,)
-        print(scaled_y_train.shape)
-
-        #scaled_y_train=y_train
-        #scaled_X_train=X_train
 
         scaled_y_train = np.insert(scaled_y_train, 0, 0)
         scaled_y_train = np.delete(scaled_y_train, -1)
 
-        n_input = self.lookbackLSTM #how many samples/rows/timesteps to look in the past in order to forecast the next sample
+        n_input = 25 #how many samples/rows/timesteps to look in the past in order to forecast the next sample
         n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
-        b_size = self.batchSize # Number of timeseries samples in each batch
+        b_size = 32 # Number of timeseries samples in each batch
         generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
 
-        #print(generator[0][0].shape)
 
-        n_input = self.lookbackLSTM #how many samples/rows/timesteps to look in the past in order to forecast the next sample
-        n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
-        b_size = self.batchSize # Number of timeseries samples in each batch
+
 
         model=self.actModel(n_input,n_features)
         print("X_train",X_train)
         print(" y_train", y_train)
-        generator = TimeseriesGenerator(X_train, y_train, length=n_input, batch_size=b_size)
+        generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
 
         print("generator",generator)
 
         model.fit_generator(generator,epochs=self.epochs)
         self.saveModel(model,"probAct")
 
-        #estimator = KerasClassifier(build_fn=model, epochs=200, batch_size=5, verbose=0)
-        #kfold = KFold(n_splits=10, shuffle=True)
-        ##########################################################################################################################
-
         loss_per_epoch = model.history.history['loss']
         plt.plot(range(len(loss_per_epoch)),loss_per_epoch);
         #plt.show()
 
-        """
+        #estimator = KerasClassifier(build_fn=model, epochs=200, batch_size=5, verbose=0)
+        #kfold = KFold(n_splits=10, shuffle=True)
+        ##########################################################################################################################
+
+
         X_test = test.drop(y_col,axis=1).copy()
         scaled_X_test = Xscaler.transform(X_test)
         test_generator = TimeseriesGenerator(scaled_X_test, np.zeros(len(X_test)), length=n_input, batch_size=b_size)
-        print(test_generator[0][0].shape)
-        """
-
-        X_test = test.drop(y_col,axis=1).copy()
-        #scaled_X_test = Xscaler.transform(X_test)
-        test_generator = TimeseriesGenerator(X_test, np.zeros(len(X_test)), length=n_input, batch_size=b_size)
-        print(test_generator[0][0].shape)
-
-
 
         y_pred_scaled = model.predict(test_generator)
-
-        #print("y_pred_scaled",y_pred_scaled)
-
-        #y_pred = Yscaler.inverse_transform(y_pred_scaled)
-        y_pred=y_pred_scaled
-        print("y_pred",y_pred)
-
-        #results = pd.DataFrame({'y_true':test[y_col].values[n_input:],'y_pred':y_pred.ravel()})
-        results = pd.DataFrame({'y_true':test[y_col].values[n_input:],'y_pred':y_pred.ravel()})
+        y_pred = Yscaler.inverse_transform(y_pred_scaled)
+        results = pd.DataFrame({'y_true':test[y_col].values[n_input:],'y_pred':y_pred.ravel().astype(int)})
         print(results)
+
         #plt.plot(results)
         plt.close('all')
         results.plot()
         plt.show()
         #train_size = int(len(dataset) * 0.67)
         #test_size = len(dataset) - train_size
-
-
-
         #y_categorical=keras.utils.to_categorical(dataset[targetCol].factorize())
-        #dataset[targetCol]=y_categorical
-        #print(dataset)
-
-        """
-        train, test = dataset[0:train_size], dataset[train_size:len(dataset)]
-        print("train,test sizes:",len(train), len(test))
-
-        trainX=train.loc[:, train.columns != targetCol]
-        trainY=train[targetCol]
-
-
-        model=self.actModel(len(trainX.columns))
-        print("trainX shape",trainX.shape)
-        print("trainY shape",trainY.shape)
-        model.fit(trainX, trainY, epochs=100, batch_size=1, verbose=2)
-        """
 
     def actModel(self,n_input, n_features):
 
+        #original model
+        model = Sequential()
+        model.add(LSTM(150, activation='relu', input_shape=(n_input, n_features)))
+        model.add(Dense(self.actTypes, activation='relu'))
+        model.add(Dense(1))
+        model.compile(optimizer='adam', loss='mse')
+        model.summary()
+
+        """
         model = Sequential()
         model.add(LSTM(250, activation='relu', input_shape=(n_input, n_features)))
         #model.add(Dense(500, activation='relu'))
@@ -172,7 +130,7 @@ class probAI():
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
         model.summary()
         #print(model.summary())
-
+        """
 
         """
         model = Sequential()
