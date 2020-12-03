@@ -213,4 +213,4 @@ df = pd.DataFrame(INDBLOCKS)
 df.dropna(subset=['type'], inplace=True)
 
 print(df)
-df.to_csv('data/PARSED/traindata.csv',index=False)
+df.to_csv('data/PARSED/acttypetraindata.csv',index=True)

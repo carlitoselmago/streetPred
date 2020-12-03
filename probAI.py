@@ -28,11 +28,11 @@ class probAI():
 
     #using https://towardsdatascience.com/how-to-convert-pandas-dataframe-to-keras-rnn-and-back-to-pandas-for-multivariate-regression-dcc34c991df9
 
-    actTypes=8 #segun los datos hay 8 pero debería haber 6
+    actTypes=9 #segun los datos hay 8 pero debería haber 6
 
     lookbackLSTM=12
     batchSize=3
-    epochs=1
+    epochs=500
 
     def __init__(self):
         print("::::::::::::::::::::::")
@@ -41,6 +41,10 @@ class probAI():
         print("")
 
     def train(self,df,targetCol):
+
+        scaleY=False
+
+        #:::::::::::::::::::::::::::::
 
         y_col=targetCol
 
@@ -56,35 +60,51 @@ class probAI():
         Xscaler = MinMaxScaler(feature_range=(0, 1)) # scale so that all the X data will range from 0 to 1
         Xscaler.fit(X_train)
         scaled_X_train = Xscaler.transform(X_train)
-        Yscaler = MinMaxScaler(feature_range=(0, 1))
-        Yscaler.fit(y_train)
-        scaled_y_train = Yscaler.transform(y_train)
-        scaled_y_train = scaled_y_train.reshape(-1) # remove the second dimention from y so the shape changes from (n,1) to (n,)
 
-        scaled_y_train = np.insert(scaled_y_train, 0, 0)
-        scaled_y_train = np.delete(scaled_y_train, -1)
+        if scaleY:
+
+            Yscaler = MinMaxScaler(feature_range=(0, 1))
+            Yscaler.fit(y_train)
+            scaled_y_train = Yscaler.transform(y_train)
+            scaled_y_train = scaled_y_train.reshape(-1) # remove the second dimention from y so the shape changes from (n,1) to (n,)
+
+            scaled_y_train = np.insert(scaled_y_train, 0, 0)
+            scaled_y_train = np.delete(scaled_y_train, -1)
+        else:
+            y_train=y_train.to_numpy()
+            y_train=keras.utils.to_categorical(y_train, num_classes=self.actTypes)
+            #print("y train",y_train)
+
 
         n_input = 25 #how many samples/rows/timesteps to look in the past in order to forecast the next sample
         n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
         b_size = 32 # Number of timeseries samples in each batch
-        generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
 
 
 
 
         model=self.actModel(n_input,n_features)
-        print("X_train",X_train)
+        print("scaled_X_train",scaled_X_train)
         print(" y_train", y_train)
-        generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
 
-        print("generator",generator)
 
-        model.fit_generator(generator,epochs=self.epochs)
+
+        if scaleY:
+            generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
+        else:
+            generator = TimeseriesGenerator(scaled_X_train, y_train, length=n_input, batch_size=b_size)
+
+
+        if scaleY:
+            model.fit_generator(generator,epochs=self.epochs)
+        else:
+            model.fit_generator(generator,epochs=self.epochs)
+             #model.fit(scaled_X_train, y_train, batch_size=b_size)
         self.saveModel(model,"probAct")
 
         loss_per_epoch = model.history.history['loss']
         plt.plot(range(len(loss_per_epoch)),loss_per_epoch);
-        #plt.show()
+        plt.show()
 
         #estimator = KerasClassifier(build_fn=model, epochs=200, batch_size=5, verbose=0)
         #kfold = KFold(n_splits=10, shuffle=True)
@@ -95,8 +115,14 @@ class probAI():
         scaled_X_test = Xscaler.transform(X_test)
         test_generator = TimeseriesGenerator(scaled_X_test, np.zeros(len(X_test)), length=n_input, batch_size=b_size)
 
-        y_pred_scaled = model.predict(test_generator)
-        y_pred = Yscaler.inverse_transform(y_pred_scaled)
+        if scaleY:
+            y_pred_scaled = model.predict(test_generator)
+            y_pred = Yscaler.inverse_transform(y_pred_scaled)
+        else:
+            y_pred = model.predict_classes(test_generator)
+
+        print(y_pred)
+
         results = pd.DataFrame({'y_true':test[y_col].values[n_input:],'y_pred':y_pred.ravel().astype(int)})
         print(results)
 
@@ -110,13 +136,32 @@ class probAI():
 
     def actModel(self,n_input, n_features):
 
+        """
         #original model
         model = Sequential()
         model.add(LSTM(150, activation='relu', input_shape=(n_input, n_features)))
         model.add(Dense(self.actTypes, activation='relu'))
-        model.add(Dense(1))
+        #model.add(Dense(1))
         model.compile(optimizer='adam', loss='mse')
         model.summary()
+        """
+        model = keras.models.Sequential()
+        model.add(keras.layers.LSTM(250, activation='relu', input_shape=(n_input, n_features), return_sequences=False))
+        model.add(keras.layers.Dense(self.actTypes*2,  activation='relu'))
+        model.add(keras.layers.Dense(self.actTypes, activation='sigmoid'))
+
+        model.compile(optimizer='adam', loss='binary_crossentropy')
+        model.summary()
+
+        """
+        model = Sequential()
+        model.add(LSTM(150, activation='relu', input_shape=(n_input, n_features)))
+        model.add(Dense(self.actTypes, activation='relu'))
+        #model.add(Dense(1))
+        model.add(Activation("softmax"))
+        model.compile(loss="binary_crossentropy", optimizer="adam",metrics=["accuracy"])
+        model.summary()
+        """
 
         """
         model = Sequential()
