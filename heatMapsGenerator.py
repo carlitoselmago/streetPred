@@ -1,10 +1,17 @@
 import numpy as np
 import osmnx as ox
+import networkx as nx
+
 import pandas as pd
 ox.config(log_console=True, use_cache=True)
 import matplotlib.pyplot as plt
 
 class locationProbAI():
+
+    viewDistance=5500 #in meters
+    minDistanceMatch=500 #in meters
+
+    mS=1000.0 #multiplier size for node plotting size
 
     visitedLocations=[] #list of locations with id, lat, lon and value of visit from 0.0 to 1.0
     visitedMaxPoints=1.0
@@ -22,18 +29,54 @@ class locationProbAI():
         else:
             raise ValueError('no dict with the key and value combination found')
 
-    def timeStepAll(self):
+    def timeStepAll(self,G):
         for i,row in enumerate(self.visitedLocations):
             row["visited"]-=self.timeStepPoint
+
             if row["visited"]>self.visitedMaxPoints:
                 row["visited"]=self.visitedMaxPoints
+
             if row["visited"]<0.0:
                 row["visited"]=0.0
+
+
+    def assignVisitsToNodes(self,nodes,G):
+        visits=[]
+
+        visitedNodes=[]
+
+        for i,l in enumerate(self.visitedLocations):
+            closestNode=(ox.get_nearest_node(G, (l["lat"],l["lon"]),return_dist=True))
+            osNodeId=str(closestNode[0])
+            print('int(closestNode[1])',int(closestNode[1]))
+            if int(closestNode[1])<self.minDistanceMatch:
+
+                self.visitedLocations[i]["nodeid"]=osNodeId
+                visitedNodes.append(str(osNodeId))
+
+        for i,node in nodes.iterrows():
+
+            locationIndex=False
+
+            try:
+                locationIndex=self.find_index(self.visitedLocations,"nodeid",str(node["osmid"]))
+                print("FOUND IN MAP! *************************************************************")
+            except:
+                pass
+            if locationIndex:
+                visits.append(self.visitedLocations[locationIndex]["visited"])
+            else:
+                visits.append(0.0)
+
+        return visits
+
 
     def generateHeatMaps(self,df):
 
         for index, row in df.iterrows():
-
+            print("")
+            print("LOCATION ROW ::::::::::::::::::::::::::::: #",index)
+            print("")
             if not any(d['placeid'] == row["placeid"] for d in self.visitedLocations):
 
                 tempRow=row
@@ -43,24 +86,40 @@ class locationProbAI():
             vi=self.find_index(self.visitedLocations,"placeid",row["placeid"])
             self.visitedLocations[vi]["visited"]+=self.visitPoints
 
-            self.timeStepAll()
-
-        print(self.visitedLocations)
-        sys.exit()
-        #G = ox.graph_from_address('350 5th Ave, New York, New York', network_type='drive')
-        #ox.plot_graph(G)
-
-        #north, east, south, west = 33.798, -84.378, 33.763, -84.422
-        # Downloading the map as a graph object
-        #G =ox.graph_from_address('Plaça de Sants, Barcelona', network_type='walk')
-        location_point=(41.372925, 2.121151)
-        distance=500
-        G = ox.graph_from_point(location_point, network_type='walk', dist=distance, simplify=True)
 
 
-        fig, ax =ox.plot_graph(G,show=False, close=False)
-        ox.plot_graph(G)
 
+            location_point=(row["lat"],row["lon"])
+            distance=self.viewDistance
+            G = ox.graph_from_point(location_point, network_type='drive', dist=distance, simplify=True)
+
+            self.timeStepAll(G)
+
+            #Make geodataframes from graph data
+            nodes, edges = ox.graph_to_gdfs(G, nodes=True, edges=True)
+
+            #Now make the same graph, but this time from the geodataframes
+            #This will help retain the 'visits' columns
+            nodes['visits']=self.assignVisitsToNodes(nodes,G)
+            nodes['visitsS']=self.mS * nodes['visits']
+
+            print(self.visitedLocations)
+
+            #G = ox.save_load.gdfs_to_graph(nodes, edges)
+            G = ox.graph_from_gdfs(nodes, edges)
+
+            #fig, ax =ox.plot_graph(G,show=True, close=False)
+            #ox.plot_graph(G)
+
+
+            if index>1:
+
+                #ox.plot_graph(G,fig_height=8,fig_width=8,node_size=nodes['visits'], node_color=nc)
+                #nc = ox.plot.get_node_colors_by_attr(G,'visits',cmap='plasma')
+                nc = ox.plot.get_node_colors_by_attr(G, 'visits',start=0.0,stop=self.visitedMaxPoints, cmap='plasma')
+                #nc = ox.plot.get_node_colors_by_attr(G, 'visits', cmap='plasma')
+                fig, ax =ox.plot_graph(G, node_color=nc, node_size=nodes['visitsS'], edge_color='#333333', bgcolor='k',show=False,figsize=(200,200))
+                fig.savefig('data/MAPS/test_'+str(index)+'.png')
 
 if __name__ == "__main__":
 
@@ -69,22 +128,3 @@ if __name__ == "__main__":
     data=pd.read_csv("data/PARSED/traindata.csv")
 
     locAI.generateHeatMaps(data)
-
-
-
-"""
-
-
-#using https://github.com/gboeing/osmnx-examples/blob/master/notebooks/12-node-elevations-edge-grades.ipynb
-# + https://stackoverflow.com/questions/62817760/coloring-nodes-according-to-an-attribute-in-osmnx
-
-place = 'San Francisco'
-place_query = {'city':'Barcelona', 'country':'Spain'}
-G = ox.graph_from_place(place_query, network_type='drive')
-
-
-
-# get one color for each node, by elevation, then plot the network
-nc = ox.plot.get_node_colors_by_attr(G, 'elevation', cmap='plasma')
-fig, ax = ox.plot_graph(G, node_color=nc, node_size=5, edge_color='#333333', bgcolor='k')
-"""
