@@ -1,6 +1,8 @@
 import numpy as np
 import osmnx as ox
 import networkx as nx
+import pickle
+import os.path
 
 import pandas as pd
 ox.config(log_console=True, use_cache=True)
@@ -8,8 +10,8 @@ import matplotlib.pyplot as plt
 
 class locationProbAI():
 
-    viewDistance=5500 #in meters
-    minDistanceMatch=500 #in meters
+    viewDistance=10000 #in meters
+    minDistanceMatch=50 #in meters
 
     mS=1000.0 #multiplier size for node plotting size
 
@@ -48,9 +50,9 @@ class locationProbAI():
         for i,l in enumerate(self.visitedLocations):
             closestNode=(ox.get_nearest_node(G, (l["lat"],l["lon"]),return_dist=True))
             osNodeId=str(closestNode[0])
-            print('int(closestNode[1])',int(closestNode[1]))
-            if int(closestNode[1])<self.minDistanceMatch:
 
+            if int(closestNode[1])<self.minDistanceMatch:
+                print("")
                 self.visitedLocations[i]["nodeid"]=osNodeId
                 visitedNodes.append(str(osNodeId))
 
@@ -87,11 +89,10 @@ class locationProbAI():
             self.visitedLocations[vi]["visited"]+=self.visitPoints
 
 
-
-
             location_point=(row["lat"],row["lon"])
             distance=self.viewDistance
-            G = ox.graph_from_point(location_point, network_type='drive', dist=distance, simplify=True)
+            G = self.getMap(location_point,distance)
+            #G = ox.graph_from_point(location_point, network_type='drive', dist=distance, simplify=False)
 
             self.timeStepAll(G)
 
@@ -103,7 +104,7 @@ class locationProbAI():
             nodes['visits']=self.assignVisitsToNodes(nodes,G)
             nodes['visitsS']=self.mS * nodes['visits']
 
-            print(self.visitedLocations)
+            #print(self.visitedLocations)
 
             #G = ox.save_load.gdfs_to_graph(nodes, edges)
             G = ox.graph_from_gdfs(nodes, edges)
@@ -116,15 +117,32 @@ class locationProbAI():
 
                 #ox.plot_graph(G,fig_height=8,fig_width=8,node_size=nodes['visits'], node_color=nc)
                 #nc = ox.plot.get_node_colors_by_attr(G,'visits',cmap='plasma')
-                nc = ox.plot.get_node_colors_by_attr(G, 'visits',start=0.0,stop=self.visitedMaxPoints, cmap='plasma')
-                #nc = ox.plot.get_node_colors_by_attr(G, 'visits', cmap='plasma')
-                fig, ax =ox.plot_graph(G, node_color=nc, node_size=nodes['visitsS'], edge_color='#333333', bgcolor='k',show=False,figsize=(200,200))
+                #nc = ox.plot.get_node_colors_by_attr(G, 'visits',start=0.0,stop=self.visitedMaxPoints, cmap='plasma')
+                print("nodes['visits']",nodes[nodes.visits > 0.00].to_string())
+                nc = ox.plot.get_node_colors_by_attr(G, 'visits', cmap='plasma')
+                fig, ax =ox.plot_graph(G, node_color=nc, node_size=nodes['visitsS'], edge_color='#333333', bgcolor='k',show=False)
                 fig.savefig('data/MAPS/test_'+str(index)+'.png')
+
+    def getMap(self,location,distance):
+        filepath="data/cachedmaps/"+str(location[0])+'_'+str(location[1])+'-'+str(distance)+'.pkl'
+        if os.path.isfile(filepath):
+            print("loading cached map")
+            #load
+            with open(filepath, 'rb') as handle:
+                b = pickle.load(handle)
+            return b
+
+        #call API and save
+        G=ox.graph_from_point(location, network_type='drive', dist=distance, simplify=False)
+        with open(filepath, 'wb') as handle:
+            pickle.dump(G, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        return G
 
 if __name__ == "__main__":
 
     locAI = locationProbAI()
 
-    data=pd.read_csv("data/PARSED/traindata.csv")
+    #data=pd.read_csv("data/PARSED/traindata.csv")
+    data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 
     locAI.generateHeatMaps(data)

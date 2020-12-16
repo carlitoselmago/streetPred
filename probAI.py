@@ -28,11 +28,13 @@ class probAI():
 
     #using https://towardsdatascience.com/how-to-convert-pandas-dataframe-to-keras-rnn-and-back-to-pandas-for-multivariate-regression-dcc34c991df9
 
-    actTypes=9 #segun los datos hay 8 pero debería haber 6
+    actTypes=14 #segun los datos hay 8 pero debería haber 6
 
     lookbackLSTM=12
     batchSize=3
     epochs=500
+
+    actY="type" #df col to predict
 
     def __init__(self):
         print("::::::::::::::::::::::")
@@ -40,13 +42,53 @@ class probAI():
         print("::::::::::::::::::::::")
         print("")
 
-    def train(self,df,targetCol):
+    def distanceTrain(self,df,targetCol):
+
+        y_col=targetCol
+
+        test_size = int(len(df) * 0.1) # here I ask that the test data will be 10% (0.1) of the entire data
+        train = df.iloc[:-test_size,:].copy() # the copy() here is important, it will prevent us from getting: SettingWithCopyWarning: A value is trying to be set on a copy of a slice from a DataFrame.
+        # Try using .loc[row_index,col_indexer] = value instead
+        test = df.iloc[-test_size:,:].copy()
+
+        #X
+        X_train = train.drop(y_col,axis=1).copy()
+        y_train = train[[y_col]].copy() # the double brakets here are to keep the y in dataframe format, otherwise it will be pandas Series
+
+        Xscaler = MinMaxScaler(feature_range=(0, 1)) # scale so that all the X data will range from 0 to 1
+        Xscaler.fit(X_train)
+        scaled_X_train = Xscaler.transform(X_train)
+
+        #Y
+        Yscaler = MinMaxScaler(feature_range=(0, 1))
+        Yscaler.fit(y_train)
+        scaled_y_train = Yscaler.transform(y_train)
+        scaled_y_train = scaled_y_train.reshape(-1) # remove the second dimention from y so the shape changes from (n,1) to (n,)
+
+        scaled_y_train = np.insert(scaled_y_train, 0, 0)
+        scaled_y_train = np.delete(scaled_y_train, -1)
+
+        n_input = 25 #how many samples/rows/timesteps to look in the past in order to forecast the next sample
+        n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
+        b_size = 32 # Number of timeseries samples in each batch
+
+        model=self.distanceModel(n_input,n_features)
+        generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
+        model.fit_generator(generator,epochs=10)
+
+        self.saveModel(model,"probDistance")
+
+        loss_per_epoch = model.history.history['loss']
+        plt.plot(range(len(loss_per_epoch)),loss_per_epoch);
+        plt.show()
+
+    def actTrain(self,df):
 
         scaleY=False
 
         #:::::::::::::::::::::::::::::
 
-        y_col=targetCol
+        y_col=self.actY
 
         test_size = int(len(df) * 0.1) # here I ask that the test data will be 10% (0.1) of the entire data
         train = df.iloc[:-test_size,:].copy() # the copy() here is important, it will prevent us from getting: SettingWithCopyWarning: A value is trying to be set on a copy of a slice from a DataFrame.
@@ -75,19 +117,13 @@ class probAI():
             y_train=keras.utils.to_categorical(y_train, num_classes=self.actTypes)
             #print("y train",y_train)
 
-
         n_input = 25 #how many samples/rows/timesteps to look in the past in order to forecast the next sample
         n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
         b_size = 32 # Number of timeseries samples in each batch
 
-
-
-
         model=self.actModel(n_input,n_features)
         print("scaled_X_train",scaled_X_train)
         print(" y_train", y_train)
-
-
 
         if scaleY:
             generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
@@ -134,17 +170,16 @@ class probAI():
         #test_size = len(dataset) - train_size
         #y_categorical=keras.utils.to_categorical(dataset[targetCol].factorize())
 
-    def actModel(self,n_input, n_features):
-
-        """
-        #original model
+    def distanceModel(self,n_input, n_features):
         model = Sequential()
         model.add(LSTM(150, activation='relu', input_shape=(n_input, n_features)))
-        model.add(Dense(self.actTypes, activation='relu'))
-        #model.add(Dense(1))
+        model.add(Dense(1))
         model.compile(optimizer='adam', loss='mse')
         model.summary()
-        """
+
+        return model
+
+    def actModel(self,n_input, n_features):
         model = keras.models.Sequential()
         model.add(keras.layers.LSTM(250, activation='relu', input_shape=(n_input, n_features), return_sequences=False))
         model.add(keras.layers.Dense(self.actTypes*2,  activation='relu'))
@@ -153,60 +188,45 @@ class probAI():
         model.compile(optimizer='adam', loss='binary_crossentropy')
         model.summary()
 
-        """
-        model = Sequential()
-        model.add(LSTM(150, activation='relu', input_shape=(n_input, n_features)))
-        model.add(Dense(self.actTypes, activation='relu'))
-        #model.add(Dense(1))
-        model.add(Activation("softmax"))
-        model.compile(loss="binary_crossentropy", optimizer="adam",metrics=["accuracy"])
-        model.summary()
-        """
-
-        """
-        model = Sequential()
-        model.add(LSTM(250, activation='relu', input_shape=(n_input, n_features)))
-        #model.add(Dense(500, activation='relu'))
-        #model.add(Dense(self.actTypes, activation='softmax'))
-        model.add(Dense(self.actTypes, activation='relu'))
-        #model.compile(optimizer='adam', loss='mse')
-        #model.compile(loss='categorical_crossentropy', optimizer='adam')
-        #model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
-        model.summary()
-        #print(model.summary())
-        """
-
-        """
-        model = Sequential()
-        #model.add(Embedding(n_features,n_input))
-        #model.add(LSTM(64,activation='tanh'))#Create Input Layer
-        model.add(Dense(8, input_dim=n_input, activation='relu'))
-        model.add(Dense(self.actTypes, activation='softmax'))#Create output layer
-        #model.add(Activation('softmax'))
-        #model.compile(loss='categorical_crossentropy', optimizer='adam')
-        model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
-        """
-
-        """
-        from numpy import zeros
-        vocab_size=n_features
-        embedding_matrix = zeros((n_features, 100))
-
-        #deep_inputs = Input(shape=(n_input,))
-        #embedding_layer = Embedding(vocab_size, 100, weights=[embedding_matrix], trainable=False)(deep_inputs)
-        #embedding_layer = Embedding(n_features,n_input)(deep_inputs)
-        #flatten=Flatten()(embedding_layer)
-        #LSTM_Layer_1 = LSTM(128,input_shape=n_input, n_features)(flatten)
-        deep_inputs = Input(shape=(n_input, n_features))
-        LSTM_Layer_1=LSTM(250, activation='relu', input_shape=(n_input, n_features))(deep_inputs)
-        dense_layer_1 = Dense(self.actTypes, activation='sigmoid')(LSTM_Layer_1)
-        model = Model(inputs=deep_inputs, outputs=dense_layer_1)
-
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
-        """
-
         return model
+
+    def predictBlock(self,input):
+
+
+        #predicts dayblock activity and location, needs the whole data to measure scaling correctly
+        input=input.drop(['name', 'duration',"placeid","dayofmonth"], axis = 1)
+        input["type"]=pd.Categorical(input['type'])
+        input["type"]=input.type.cat.codes
+
+
+        actModel=self.loadModel("probAct")
+
+        y_col=self.actY
+
+        #X
+        X_input=input.drop(y_col,axis=1).copy()
+
+        Xscaler = MinMaxScaler(feature_range=(0, 1))
+        Xscaler.fit(X_input)
+        #X_train = train.drop(y_col,axis=1).copy()
+        #y_train = train[[y_col]].copy() # the double brakets here are to keep the y in dataframe format, otherwise it will be pandas Series
+
+        Xpredict=X_input.tail(AI.lookbackLSTM*8)
+        scaled_X_test = Xscaler.transform(Xpredict)
+
+        p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(len(Xpredict)), length=25, batch_size=32)
+
+        y_pred= actModel.predict_classes(p_generator)
+
+
+
+        print(y_pred)
+
+        #predict activity
+
+
+    def loadModel(self,name):
+        return keras.models.load_model('models/'+name)
 
     def saveModel(self,model,name):
         model.save('models/'+name)
@@ -214,7 +234,10 @@ class probAI():
 if __name__ == "__main__":
     AI=probAI()
 
-    data=pd.read_csv("data/PARSED/traindata.csv")
+
+    #activity train
+
+    data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 
     #filter useful columns
     #dataset=data.drop(['name', 'duration',"placeid","dayofmonth","lat","lon"], axis = 1)
@@ -229,4 +252,32 @@ if __name__ == "__main__":
     #plt.plot(dataset["dayofweek"])
     #plt.show()
 
-    AI.train(dataset,"type")
+    AI.actTrain(dataset)
+
+
+    """
+    #distance train
+    data=pd.read_csv("data/PARSED/distancedtraindata.csv")
+    print(data)
+    #filter useful columns
+    data=data.drop(['name'], axis = 1)
+    print(data.dtypes)
+
+    data["type"]=pd.Categorical(data['type'])
+    data["type"]=data.type.cat.codes
+    #pd.set_option('display.max_rows', dataset.shape[0]+1)
+    print(data)
+    #sys.exit()
+    #plt.plot(dataset["dayofweek"])
+    #plt.show()
+
+    AI.distanceTrain(data,"distancefromlast")
+    """
+
+    #predict
+    """
+    data=pd.read_csv("data/PARSED/acttypetraindata.csv")
+    print(data.tail(AI.lookbackLSTM))
+    predicted=AI.predictBlock(data)
+    print(predicted)
+    """

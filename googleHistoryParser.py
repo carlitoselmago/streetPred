@@ -198,12 +198,14 @@ for tb in TRAINBLOCKS:
     for i,b in enumerate(tb):
         bb=b
         bb["timeblock"]=i
+        if bb["type"]!="-":
 
-        if len(INDBLOCKS)>2:
-            if bb["timeblock"]==0 and bb["dayofweek"]==INDBLOCKS[i-1]["dayofweek"]:
-                bb["dayofweek"]+=1
-        INDBLOCKS.append(bb)
-        print (bb)
+            if len(INDBLOCKS)>2:
+                if bb["timeblock"]==0 and bb["dayofweek"]==INDBLOCKS[i-1]["dayofweek"]:
+                    bb["dayofweek"]+=1
+
+            INDBLOCKS.append(bb)
+            print (bb)
 
 print("")
 print("TRAINBLOCKS")
@@ -213,4 +215,4 @@ df = pd.DataFrame(INDBLOCKS)
 df.dropna(subset=['type'], inplace=True)
 
 print(df)
-df.to_csv('data/PARSED/acttypetraindata.csv',index=True)
+df.to_csv('data/PARSED/acttypetraindata.csv',index=False)
