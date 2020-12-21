@@ -29,7 +29,8 @@ from keras.layers.merge import Concatenate
 from sklearn import preprocessing
 
 from distanceParser import distanceProbAI
-from googleHistoryParser import _DAYSPLIT
+from googleHistoryParser import _DAYSPLIT,catLocations
+
 
 
 class probAI():
@@ -199,6 +200,14 @@ class probAI():
 
         return model
 
+    def getPredLocation(self,loc,distance,data):
+
+        #define margins
+        m1=((loc[1]-distance),(loc[0]-distance))
+        m2=((loc[1]+distance),(loc[0]+distance))
+
+        #TODO: acabar esto
+
     def fillData(self,data,predicted):
         #fill data with trivial decisions
         lastRow=data.tail(1)
@@ -220,6 +229,8 @@ class probAI():
         predicted["month"]=nowDay.month
         predicted["year"]=nowDay.year
         predicted["timeblock"]=nowTimeBlock
+
+        print("predicting timeblock #",nowTimeBlock+1," of ",_DAYSPLIT, nowDay,"...")
 
         return predicted
 
@@ -325,7 +336,6 @@ class probAI():
 if __name__ == "__main__":
     AI=probAI()
 
-
     #activity train
 
     if not os.path.isdir("models/probAct"):
@@ -375,6 +385,6 @@ if __name__ == "__main__":
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
     #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
     print(data.tail(AI.lookbackLSTM))
-    blocks=AI.predictBlocks(data,400)
+    blocks=AI.predictBlocks(data,10)
 
     print(blocks)
