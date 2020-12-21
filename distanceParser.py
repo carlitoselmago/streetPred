@@ -13,7 +13,7 @@ class distanceProbAI():
     def __init__(self):
         pass
 
-    def trainData(self,df):
+    def parseData(self,df):
 
         #if os.path.isfile(self.dataDistancedFile):
         #    return pd.read_csv(self.dataDistancedFile)
@@ -45,7 +45,7 @@ class distanceProbAI():
         return newdf
 
     def trainDistances(self,df):
-        trainData=self.trainData(df)
+        trainData=self.parseData(df)
 
 
 

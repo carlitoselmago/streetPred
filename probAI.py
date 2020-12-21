@@ -1,10 +1,14 @@
 import pandas as pd
 import numpy as np
 import keras
+import os.path
+from datetime import timedelta
+from datetime import datetime
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
 #keras
+import silence_tensorflow.auto
 from keras.preprocessing.sequence import TimeseriesGenerator
 from keras.models import Sequential
 from keras.layers import Dense,LSTM,Embedding,Activation
@@ -22,6 +26,10 @@ from sklearn.model_selection import train_test_split
 from keras.preprocessing.text import Tokenizer
 from keras.layers import Input
 from keras.layers.merge import Concatenate
+from sklearn import preprocessing
+
+from distanceParser import distanceProbAI
+from googleHistoryParser import _DAYSPLIT
 
 
 class probAI():
@@ -32,7 +40,7 @@ class probAI():
 
     lookbackLSTM=12
     batchSize=3
-    epochs=500
+    #epochs=500
 
     actY="type" #df col to predict
 
@@ -42,9 +50,10 @@ class probAI():
         print("::::::::::::::::::::::")
         print("")
 
-    def distanceTrain(self,df,targetCol):
-
-        y_col=targetCol
+    def distanceTrain(self,df,epochs=10):
+        print("train df")
+        print(df)
+        y_col="distancefromlast"
 
         test_size = int(len(df) * 0.1) # here I ask that the test data will be 10% (0.1) of the entire data
         train = df.iloc[:-test_size,:].copy() # the copy() here is important, it will prevent us from getting: SettingWithCopyWarning: A value is trying to be set on a copy of a slice from a DataFrame.
@@ -72,9 +81,11 @@ class probAI():
         n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
         b_size = 32 # Number of timeseries samples in each batch
 
+        print("scaled_y_train",scaled_y_train)
+
         model=self.distanceModel(n_input,n_features)
         generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
-        model.fit_generator(generator,epochs=10)
+        model.fit_generator(generator,epochs=epochs)
 
         self.saveModel(model,"probDistance")
 
@@ -82,7 +93,7 @@ class probAI():
         plt.plot(range(len(loss_per_epoch)),loss_per_epoch);
         plt.show()
 
-    def actTrain(self,df):
+    def actTrain(self,df,epochs=100):
 
         scaleY=False
 
@@ -122,8 +133,6 @@ class probAI():
         b_size = 32 # Number of timeseries samples in each batch
 
         model=self.actModel(n_input,n_features)
-        print("scaled_X_train",scaled_X_train)
-        print(" y_train", y_train)
 
         if scaleY:
             generator = TimeseriesGenerator(scaled_X_train, scaled_y_train, length=n_input, batch_size=b_size)
@@ -132,9 +141,9 @@ class probAI():
 
 
         if scaleY:
-            model.fit_generator(generator,epochs=self.epochs)
+            model.fit_generator(generator,epochs=epochs)
         else:
-            model.fit_generator(generator,epochs=self.epochs)
+            model.fit_generator(generator,epochs=epochs)
              #model.fit(scaled_X_train, y_train, batch_size=b_size)
         self.saveModel(model,"probAct")
 
@@ -190,14 +199,55 @@ class probAI():
 
         return model
 
+    def fillData(self,data,predicted):
+        #fill data with trivial decisions
+        lastRow=data.tail(1)
+
+        lastDay=datetime(lastRow["year"],lastRow["month"],lastRow["dayofmonth"])
+        nowDay=lastDay
+        nowTimeBlock=int(lastRow["timeblock"])
+
+        if nowTimeBlock>(_DAYSPLIT-1):
+            #add 1 day
+            nowDay+= timedelta(days=1)
+            nowTimeBlock=0
+        else:
+            nowTimeBlock+=1
+
+        predicted["name"]="?"
+        predicted["dayofmonth"]=nowDay.day
+        predicted["dayofweek"]=nowDay.weekday()
+        predicted["month"]=nowDay.month
+        predicted["year"]=nowDay.year
+        predicted["timeblock"]=nowTimeBlock
+
+        return predicted
+
+
+    def predictBlocks(self,data,blocks):
+        distanceParser=distanceProbAI()
+        data=distanceParser.parseData(data)
+        predicted=[]
+        for i in range(blocks):
+            pred=self.predictBlock(data)
+
+            newRow=self.fillData(data,pred)
+            data=data.append(newRow,ignore_index=True)
+        return data.tail(blocks)
+
     def predictBlock(self,input):
 
+        lookBackLength=25
 
-        #predicts dayblock activity and location, needs the whole data to measure scaling correctly
-        input=input.drop(['name', 'duration',"placeid","dayofmonth"], axis = 1)
-        input["type"]=pd.Categorical(input['type'])
-        input["type"]=input.type.cat.codes
+        originalInput=input.copy()
 
+        #predicts dayblock activity and location, needs the whole data to measure scaling correctly, add target row as last with empty Y
+        input=input.drop(['name',"lat","lon","distancefromlast"], axis = 1)
+
+        #input["type"]=pd.Categorical(input['type'])
+        #input["type"]=input.type.cat.codes
+        input["type"]=self.toCategorical(input["type"])
+        #input["type"]=input["type"].astype('category')
 
         actModel=self.loadModel("probAct")
 
@@ -211,19 +261,60 @@ class probAI():
         #X_train = train.drop(y_col,axis=1).copy()
         #y_train = train[[y_col]].copy() # the double brakets here are to keep the y in dataframe format, otherwise it will be pandas Series
 
-        Xpredict=X_input.tail(AI.lookbackLSTM*8)
+        #Xpredict=X_input.tail(AI.lookbackLSTM*4)
+        Xpredict=X_input.tail(lookBackLength)
         scaled_X_test = Xscaler.transform(Xpredict)
 
-        p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(len(Xpredict)), length=25, batch_size=32)
+        #p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(len(Xpredict)), length=25, batch_size=32)
+        p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(lookBackLength), length=1, batch_size=32)
 
-        y_pred= actModel.predict_classes(p_generator)
+        ActPred= actModel.predict_classes(p_generator) #tokenized prediction
+        ActString=self.inverseCategorical(ActPred)
 
 
+        #predict distance/location #############################################
+        distanceModel=self.loadModel("probDistance")
 
-        print(y_pred)
 
-        #predict activity
+        input=originalInput.copy()
 
+
+        input=input.drop(['name','lat','lon'], axis = 1)
+
+        input["type"]=self.toCategorical(input["type"])
+
+        y_col="distancefromlast"
+
+        X_train = input.drop(y_col,axis=1).copy()
+
+
+        Xscaler.fit(X_train)
+
+        y_train = input[[y_col]].copy()
+        Yscaler = MinMaxScaler(feature_range=(0, 1))
+        Yscaler.fit(y_train)
+
+
+        Xpredict=X_train.tail(lookBackLength)
+
+        scaled_X_test = Xscaler.transform(Xpredict)
+
+        p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(lookBackLength), length=1, batch_size=32)
+
+        y_pred_scaled = distanceModel.predict(p_generator)
+
+        distancePred = Yscaler.inverse_transform(y_pred_scaled)
+
+        return {"type":ActString[-1],"distancefromlast":float(distancePred[-1][0])}
+
+    def toCategorical(self,inputs):
+        actle = preprocessing.LabelEncoder()
+        actle.fit(inputs)
+        self.actle=actle
+        return actle.transform(inputs)
+
+    def inverseCategorical(self,inputs):
+        return self.actle.inverse_transform(inputs)
 
     def loadModel(self,name):
         return keras.models.load_model('models/'+name)
@@ -237,47 +328,53 @@ if __name__ == "__main__":
 
     #activity train
 
-    data=pd.read_csv("data/PARSED/acttypetraindata.csv")
+    if not os.path.isdir("models/probAct"):
+        data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 
-    #filter useful columns
-    #dataset=data.drop(['name', 'duration',"placeid","dayofmonth","lat","lon"], axis = 1)
-    dataset=data.drop(['name', 'duration',"placeid","dayofmonth"], axis = 1)
-    print(dataset.dtypes)
-
-    dataset["type"]=pd.Categorical(dataset['type'])
-    dataset["type"]=dataset.type.cat.codes
-    #pd.set_option('display.max_rows', dataset.shape[0]+1)
-    print(dataset)
-    #sys.exit()
-    #plt.plot(dataset["dayofweek"])
-    #plt.show()
-
-    AI.actTrain(dataset)
+        #filter useful columns
+        dataset=data.drop(['name', 'duration',"placeid","lat","lon"], axis = 1)
+        #dataset=data.drop(['name', 'duration',"placeid","dayofmonth"], axis = 1)
 
 
-    """
-    #distance train
-    data=pd.read_csv("data/PARSED/distancedtraindata.csv")
-    print(data)
-    #filter useful columns
-    data=data.drop(['name'], axis = 1)
-    print(data.dtypes)
+        dataset["type"]=pd.Categorical(dataset['type'])
+        dataset["type"]=dataset.type.cat.codes
+        #pd.set_option('display.max_rows', dataset.shape[0]+1)
 
-    data["type"]=pd.Categorical(data['type'])
-    data["type"]=data.type.cat.codes
-    #pd.set_option('display.max_rows', dataset.shape[0]+1)
-    print(data)
-    #sys.exit()
-    #plt.plot(dataset["dayofweek"])
-    #plt.show()
+        #sys.exit()
+        #plt.plot(dataset["dayofweek"])
+        #plt.show()
 
-    AI.distanceTrain(data,"distancefromlast")
-    """
+        AI.actTrain(dataset,100)
+    else:
+        print("loading pretrained actTrain")
+
+
+    if not os.path.isdir("models/probDistance"):
+        #distance train
+        data=pd.read_csv("data/PARSED/distancedtraindata.csv")
+        print(data)
+        #filter useful columns
+        data=data.drop(['name','lat','lon'], axis = 1)
+        print(data.dtypes)
+
+        data["type"]=pd.Categorical(data['type'])
+        data["type"]=data.type.cat.codes
+        #pd.set_option('display.max_rows', dataset.shape[0]+1)
+        print(data)
+        #sys.exit()
+        #plt.plot(dataset["dayofweek"])
+        #plt.show()
+
+        AI.distanceTrain(data)
+    else:
+        print("loading pretrained distanceTrain")
+
 
     #predict
-    """
+
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
+    #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
     print(data.tail(AI.lookbackLSTM))
-    predicted=AI.predictBlock(data)
-    print(predicted)
-    """
+    blocks=AI.predictBlocks(data,400)
+
+    print(blocks)
