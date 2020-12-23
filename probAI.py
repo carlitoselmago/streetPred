@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import keras
 import os.path
+import math
+import random
 from datetime import timedelta
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -28,7 +30,7 @@ from keras.layers import Input
 from keras.layers.merge import Concatenate
 from sklearn import preprocessing
 
-from distanceParser import distanceProbAI
+from distanceParser import distanceParser
 from googleHistoryParser import _DAYSPLIT,catLocations
 
 
@@ -200,13 +202,37 @@ class probAI():
 
         return model
 
-    def getPredLocation(self,loc,distance,data):
+    def getPredLocation(self,lastloc,actType,distance,last):
+
+        #distance is in kilometers
+        pad=0.2 #margin of distance
+
+        lastloc=(float(lastloc[0]),float(lastloc[1]))
+
+        if distance<=pad:
+            return {"name":str(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
 
         #define margins
-        m1=((loc[1]-distance),(loc[0]-distance))
-        m2=((loc[1]+distance),(loc[0]+distance))
+        #m1=((loc[0]-distance),(loc[1]-distance))
+        #m2=((loc[0]+distance),(loc[1]+distance))
 
-        #TODO: acabar esto
+        candidates=[]
+
+        for i,l in catLocations.iterrows():
+            cloc=(l["latitudeE7"]/ 1e7,l["longitudeE7"]/1e7)
+            if not math.isnan(cloc[0]):
+
+                cdistance=self.distanceParser.calcDistance(lastloc,cloc)
+                if distance < (cdistance+pad) and distance > (cdistance-pad) and actType==l["cat"]:
+                     candidates.append({"name":str(l["name"]),"lat":float(cloc[0]),"lon":float(cloc[1])})
+                #if loc[0]<m1[0] and loc[1]>m1[1] and loc[0]<m2[0] and loc[1]<m2[1]
+                if len(candidates)>4:
+                    return random.choice(candidates)
+
+        if len(candidates)>0:
+            return candidates[-1]
+        else:
+            return {"name":str(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
 
     def fillData(self,data,predicted):
         #fill data with trivial decisions
@@ -230,14 +256,20 @@ class probAI():
         predicted["year"]=nowDay.year
         predicted["timeblock"]=nowTimeBlock
 
+        locpred=self.getPredLocation((float(lastRow["lat"]),float(lastRow["lon"])),str(predicted["type"]),float(predicted["distancefromlast"]),lastRow)
+
+        predicted["name"]="_"+str(locpred["name"])
+        predicted["lat"]=float(locpred["lat"])
+        predicted["lon"]=float(locpred["lon"])
+
         print("predicting timeblock #",nowTimeBlock+1," of ",_DAYSPLIT, nowDay,"...")
 
         return predicted
 
 
     def predictBlocks(self,data,blocks):
-        distanceParser=distanceProbAI()
-        data=distanceParser.parseData(data)
+        self.distanceParser=distanceParser()
+        data=self.distanceParser.parseData(data)
         predicted=[]
         for i in range(blocks):
             pred=self.predictBlock(data)
@@ -385,6 +417,6 @@ if __name__ == "__main__":
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
     #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
     print(data.tail(AI.lookbackLSTM))
-    blocks=AI.predictBlocks(data,10)
+    blocks=AI.predictBlocks(data,5)
 
-    print(blocks)
+    print(blocks["name"])

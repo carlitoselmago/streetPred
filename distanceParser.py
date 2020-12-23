@@ -4,7 +4,7 @@ import os.path
 import pandas as pd
 import geopy.distance
 
-class distanceProbAI():
+class distanceParser():
 
     dataDistancedFile='data/PARSED/distancedtraindata.csv'
     maxKm=1500.0 #max distance traveled
@@ -44,18 +44,16 @@ class distanceProbAI():
         newdf.to_csv(self.dataDistancedFile, index=False)
         return newdf
 
-    def trainDistances(self,df):
+    def parse(self,df):
         trainData=self.parseData(df)
-
-
 
     def calcDistance(self,loc1,loc2):
         return geopy.distance.distance(loc1, loc2).km
 
 if __name__ == "__main__":
 
-    locAI = distanceProbAI()
+    locAI = distanceParser()
 
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 
-    locAI.trainDistances(data)
+    locAI.parse(data)
