@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+import re
+import xml
 
 class helpers():
     def __init__(self):
@@ -47,12 +49,15 @@ class helpers():
     def validDayblocks(self,dayblocks):
 
         for b in dayblocks:
-
             if b is False:
                 return False
             else:
                 return True
                 if b["type"] is None:
                     return False
-
         return True
+
+    def stripTags(self,text):
+        cleanr = re.compile('<.*?>')
+        cleantext = re.sub(cleanr, '', text)
+        return cleantext

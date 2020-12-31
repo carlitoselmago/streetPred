@@ -8,6 +8,9 @@ from datetime import timedelta
 from datetime import datetime
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from googledirections import *
+from helpers import helpers
+H=helpers()
 
 #keras
 import silence_tensorflow.auto
@@ -210,6 +213,7 @@ class probAI():
         lastloc=(float(lastloc[0]),float(lastloc[1]))
 
         if distance<=pad:
+            print("A",str(last["name"]))
             return {"name":str(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
 
         #define margins
@@ -232,7 +236,11 @@ class probAI():
         if len(candidates)>0:
             return candidates[-1]
         else:
-            return {"name":str(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
+            #print(type(last["name"]))
+            #print("B",str(last["name"].item()))
+
+            #print(last)
+            return {"name":(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
 
     def fillData(self,data,predicted):
         #fill data with trivial decisions
@@ -257,8 +265,12 @@ class probAI():
         predicted["timeblock"]=nowTimeBlock
 
         locpred=self.getPredLocation((float(lastRow["lat"]),float(lastRow["lon"])),str(predicted["type"]),float(predicted["distancefromlast"]),lastRow)
+        if isinstance(locpred["name"], pd.Series):
+            name=locpred["name"].item()
+        else:
+            name=locpred["name"]
+        predicted["name"]="_"+str(name)
 
-        predicted["name"]="_"+str(locpred["name"])
         predicted["lat"]=float(locpred["lat"])
         predicted["lon"]=float(locpred["lon"])
 
@@ -266,6 +278,12 @@ class probAI():
 
         return predicted
 
+    def timeblock2Hour(self,row):
+        hour=int((row["timeblock"]*24)/_DAYSPLIT)-1
+        if hour<0:
+            hour=0
+        fecha=datetime(row["year"],row["month"],row["dayofmonth"],int(hour))
+        return fecha
 
     def predictBlocks(self,data,blocks):
         self.distanceParser=distanceParser()
@@ -273,10 +291,28 @@ class probAI():
         predicted=[]
         for i in range(blocks):
             pred=self.predictBlock(data)
-
             newRow=self.fillData(data,pred)
+            last=data.iloc[-1]
+            hour=int((last["timeblock"]*24)/_DAYSPLIT)-1
+            if hour<0:
+                hour=0
+            lastDatetime=datetime(2025,last["month"],last["dayofmonth"],int(hour))
+            lastDatetime=lastDatetime+timedelta(minutes=random.randint(0, 60))
+            if newRow["distancefromlast"]>0.001:
+                route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime)
+            else:
+                route=False
+            predicted.append("#####"+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow)))
+            if route:
+                predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
+                for r in route:
+                    predicted.append(H.stripTags(r))
+
+                predicted.append("")
+
             data=data.append(newRow,ignore_index=True)
-        return data.tail(blocks)
+        #return data.tail(blocks)
+        return predicted
 
     def predictBlock(self,input):
 
@@ -419,4 +455,9 @@ if __name__ == "__main__":
     print(data.tail(AI.lookbackLSTM))
     blocks=AI.predictBlocks(data,5)
 
-    print(blocks["name"])
+    print("")
+    print("------------------------------------------------------")
+    print("")
+    for b in blocks:
+        print(b)
+    #print(blocks["name"])
