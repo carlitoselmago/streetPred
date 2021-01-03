@@ -1,7 +1,8 @@
 config.py
 /cache/
-/data/
-/models/
+/data/*
+/models/*
+/predicted/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
