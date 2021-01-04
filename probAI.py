@@ -270,7 +270,8 @@ class probAI():
             name=locpred["name"].item()
         else:
             name=locpred["name"]
-        predicted["name"]="_"+str(name)
+        #predicted["name"]="_"+str(name)
+        predicted["name"]=str(name)
 
         predicted["lat"]=float(locpred["lat"])
         predicted["lon"]=float(locpred["lon"])
@@ -293,6 +294,12 @@ class probAI():
         routesTexts=[]
         points=[]
         routes=[]
+
+        #hack para mostrar el punto de partida
+        last=data.iloc[-1]
+        points.append((last["lat"],last["lon"]))
+        routesTexts.append('<h3><span class="numero">0</span>'+str(last["name"].replace("::::REST DAY::::","Hogar"))+"  "+str(self.timeblock2Hour(last))+'</h3>')
+
         for i in range(blocks):
             pred=self.predictBlock(data)
             newRow=self.fillData(data,pred)
@@ -306,27 +313,33 @@ class probAI():
                 route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime)
             else:
                 route=False
-            print("route",route)
-            place='<h5><span class="numero">'+str(len(points)+1)+'</span>#####'+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow))+'</h5>'
-            points.append((newRow["lat"],newRow["lon"]))
-            predicted.append(place)
-            routesTexts.append(place)
-            if route:
-                print(json.dumps(route[0]["legs"]))
-                routes.append(json.dumps(route[0]["legs"])+"\n")#+";"+"\n")
-                #predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
-                for l in route[0]["legs"][0]["steps"]:
-                    #}print(l["html_instructions"])
-                    routesTexts.append(l["html_instructions"])
-                    if "steps" in l:
-                        for i in l["steps"]:
-                            routesTexts.append(i["html_instructions"])
-                #for r in route:
-                #    predicted.append(H.stripTags(r))
 
-                #predicted.append("")
 
-            data=data.append(newRow,ignore_index=True)
+            newTime=lastDatetime+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
+            #place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow))+'</h3>'
+            place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newTime.strftime("%m/%d/%Y, %H:%M:%S"))+'</h3>'
+            if last["name"]!=newRow["name"]:
+
+
+                points.append((newRow["lat"],newRow["lon"]))
+                predicted.append(place)
+
+                if route:
+
+                    routes.append(json.dumps(route[0]["legs"])+"\n")#+";"+"\n")
+                    #predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
+                    for l in route[0]["legs"][0]["steps"]:
+                        #}print(l["html_instructions"])
+                        routesTexts.append(l["html_instructions"])
+                        if "steps" in l:
+                            for i in l["steps"]:
+                                routesTexts.append(i["html_instructions"])
+                    #for r in route:
+                    #    predicted.append(H.stripTags(r))
+
+                    #predicted.append("")
+                routesTexts.append(place)
+                data=data.append(newRow,ignore_index=True)
 
         center=H.centerOfLocs(points)
         H.buildPredictedHtml(center,routesTexts,points,routes)
@@ -474,7 +487,7 @@ if __name__ == "__main__":
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
     #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
     print(data.tail(AI.lookbackLSTM))
-    blocks=AI.predictBlocks(data,2)
+    blocks=AI.predictBlocks(data,3)
 
     print("")
     print("------------------------------------------------------")

@@ -83,16 +83,29 @@ class helpers():
           <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
 
           <style>
-            html,
-            body,
+          body{
+             font-family: "Open Sans";
+          }
             #map_canvas {
               height: 60vw;
               width: 100%;
               margin: 0px;
-              padding: 0px font-family: "Open Sans";
+              padding: 0px;
+
             }
             #text{
-
+                padding:0px; 15px;
+            }
+            .numero{
+                    background-color: #EA4335;
+                    padding: 9px;
+                    border-radius: 99999999999999999px;
+                    height: 20px;
+                    width: 22px;
+                    display: inline-block;
+                    text-align: center;
+                    line-height: 22px;
+                    margin-right: 12px;
             }
           </style>
 
@@ -112,7 +125,8 @@ class helpers():
               var steps = legs[i].steps;
               for (j = 0; j < steps.length; j++) {
                 //TODO: fix this
-                //polyline.getPath().push(steps[j].end_location);
+                var newcord=new google.maps.LatLng(steps[j].end_location.lat, steps[j].end_location.lng)
+                polyline.getPath().push(newcord);
                 //bounds.extend(steps[j]);
               if (steps[j].hasOwnProperty("path")){
                 var nextSegment = steps[j].path;
