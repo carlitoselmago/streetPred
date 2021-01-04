@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from googledirections import *
 from helpers import helpers
+import json
 H=helpers()
 
 #keras
@@ -289,6 +290,9 @@ class probAI():
         self.distanceParser=distanceParser()
         data=self.distanceParser.parseData(data)
         predicted=[]
+        routesTexts=[]
+        points=[]
+        routes=[]
         for i in range(blocks):
             pred=self.predictBlock(data)
             newRow=self.fillData(data,pred)
@@ -302,17 +306,34 @@ class probAI():
                 route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime)
             else:
                 route=False
-            predicted.append("#####"+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow)))
+            print("route",route)
+            place='<h5><span class="numero">'+str(len(points)+1)+'</span>#####'+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow))+'</h5>'
+            points.append((newRow["lat"],newRow["lon"]))
+            predicted.append(place)
+            routesTexts.append(place)
             if route:
-                predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
-                for r in route:
-                    predicted.append(H.stripTags(r))
+                print(json.dumps(route[0]["legs"]))
+                routes.append(json.dumps(route[0]["legs"])+"\n")#+";"+"\n")
+                #predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
+                for l in route[0]["legs"][0]["steps"]:
+                    #}print(l["html_instructions"])
+                    routesTexts.append(l["html_instructions"])
+                    if "steps" in l:
+                        for i in l["steps"]:
+                            routesTexts.append(i["html_instructions"])
+                #for r in route:
+                #    predicted.append(H.stripTags(r))
 
-                predicted.append("")
+                #predicted.append("")
 
             data=data.append(newRow,ignore_index=True)
+
+        center=H.centerOfLocs(points)
+        H.buildPredictedHtml(center,routesTexts,points,routes)
+
         #return data.tail(blocks)
         return predicted
+
 
     def predictBlock(self,input):
 
@@ -453,7 +474,7 @@ if __name__ == "__main__":
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
     #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
     print(data.tail(AI.lookbackLSTM))
-    blocks=AI.predictBlocks(data,5)
+    blocks=AI.predictBlocks(data,2)
 
     print("")
     print("------------------------------------------------------")

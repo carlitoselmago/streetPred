@@ -19,8 +19,12 @@ def groute(start,end,timet):
     directions_result = gmaps.directions(start,#string coords separated by comma without spaces
                                          end,#string coords separated by comma without spaces
                                          language="es",
-                                         mode='transit',
+                                         mode='driving',#mode='transit'
                                          departure_time=timet)
+    #print("directions_result",directions_result)
+    return directions_result
+
+    ######
 
     print(directions_result)
     routeSteps=[]
@@ -35,6 +39,8 @@ def groute(start,end,timet):
         #print("")
     #print(directions_result[0]["legs"])
     return routeSteps
+
+
 
 if __name__ == "__main__":
     now = datetime.now()
