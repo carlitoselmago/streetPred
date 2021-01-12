@@ -5,7 +5,7 @@ from helpers import helpers
 H=helpers()
 
 
-def groute(start,end,timet):
+def groute(start,end,timet,mode="walking"):
     gmaps = googlemaps.Client(key=config.gmapsAPI)
 
     # Geocoding an address
@@ -18,8 +18,8 @@ def groute(start,end,timet):
 
     directions_result = gmaps.directions(start,#string coords separated by comma without spaces
                                          end,#string coords separated by comma without spaces
-                                         language="es",
-                                         mode='driving',#mode='transit'
+                                         #language="en",
+                                         mode=mode,#options: driving, walking, bicycling, transit (metro etc)
                                          departure_time=timet)
     #print("directions_result",directions_result)
     return directions_result

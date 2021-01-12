@@ -28,7 +28,7 @@ class distanceParser():
             distance=self.calcDistance(currentLoc,lastLoc)
 
 
-            newRow={"type":row["type"],"name":row["name"],"dayofmonth":row["dayofmonth"],"dayofweek":row["dayofweek"],"month":row["month"],"year":row["year"],"lat":row["lat"],"lon":row["lon"],"timeblock":row["timeblock"]}
+            newRow={"type":row["type"],"name":row["name"],"dayofmonth":row["dayofmonth"],"dayofweek":row["dayofweek"],"month":row["month"],"year":row["year"],"lat":row["lat"],"lon":row["lon"],"timeblock":row["timeblock"],"lasttransport":row["lasttransport"]}
             newRow["distancefromlast"]=distance #in KM float
 
             if row["type"]=="Portal":

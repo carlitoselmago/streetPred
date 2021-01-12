@@ -6,6 +6,7 @@ import glob
 import sys
 import pandas as pd
 import numpy as np
+import re
 
 from helpers import helpers
 
@@ -26,18 +27,35 @@ limit=0
 catLocationsURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vShw1idYHeOZpKT0w10zHVUkbBEQU_a7E4w2qlBSPN7hNr3QpV2M_r5L3Bs3_Jw5_AlvSpBx8GGuoyP/pub?output=csv'
 catLocations = pd.read_csv(catLocationsURL)
 
-if __name__ == "__main__":
+def sortkey(x):
+    monthIndex=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"]
+    x=x.replace("data/ALL/","")
+    parts = re.split('[-._]', x)
+    return [int(parts[0]), monthIndex.index((parts[1]))]
 
-    # JOIN ALL FILES DATA
-    datas=[]
+def loadHistory():
+
+    files=[]
     for name in glob.glob('data/ALL/*.json'):
-        print(name)
+        sortkey(name)
+        files.append(name)
+    files=sorted(files, key=sortkey)
+    datas=[]
+    for name in files:
+        #print(name)
         with open(name,mode="r", encoding="utf-8") as json_file:
             data = json.load(json_file)['timelineObjects']
             datas+=data
 
-
     print("TOTAL timelineobjeects",len(datas))
+    return datas
+
+
+
+def parseHistory():
+
+    # JOIN ALL FILES DATA
+    datas=loadHistory()
 
     # END JOIN
 
@@ -53,6 +71,7 @@ if __name__ == "__main__":
     defaultActivityType="Stu"
 
     TRAINBLOCKS=[]
+    travelMoves=[]
 
     for i,p in enumerate(datas):
 
@@ -128,6 +147,8 @@ if __name__ == "__main__":
                 print("daysplitIndex",daysplitIndex,"%%%%%%%%%%%%%%%%%%")
                 print("")
 
+
+
                 actT=None#defaultActivityType
 
                 actTDB=catLocations.loc[catLocations["id"]==placeID]["cat"].values[0]
@@ -139,7 +160,9 @@ if __name__ == "__main__":
                 year=fechaTiempo.year
                 dayofmonth=fechaTiempo.day
 
-                activity={"type":actT,"duration":duration,"name":placeName,"placeid":placeID,"dayofmonth":dayofmonth,"dayofweek":dayofweek,"month":month,"year":year,"lat":p["location"]["latitudeE7"]/ 1e7,"lon":p["location"]["longitudeE7"]/ 1e7}
+                activity={"type":actT,"duration":duration,"name":placeName,"placeid":placeID,"dayofmonth":dayofmonth,"dayofweek":dayofweek,"month":month,"year":year,"lat":p["location"]["latitudeE7"]/ 1e7,"lon":p["location"]["longitudeE7"]/ 1e7,"lasttransport":H.selectTransportMode(travelMoves)}
+
+                travelMoves=[]
 
                 try:
                     if duration>dayBlocks[daysplitIndex]["duration"]:
@@ -153,8 +176,10 @@ if __name__ == "__main__":
 
             fechaTiempo=datetime.fromtimestamp(int(p["activitySegment"]["duration"]["startTimestampMs"])/1000.0)
             fecha=fechaTiempo.date()
+
             try:
                 print(p["activitySegment"]["activityType"],"---------------------------------------------->")
+                travelMoves.append(p["activitySegment"]["activityType"])
             except:
                 pass
 
@@ -205,7 +230,7 @@ if __name__ == "__main__":
                         bb["dayofweek"]+=1
 
                 INDBLOCKS.append(bb)
-                print (bb)
+                #print (bb)
 
     print("")
     print("TRAINBLOCKS")
@@ -216,3 +241,7 @@ if __name__ == "__main__":
 
     print(df)
     df.to_csv('data/PARSED/acttypetraindata.csv',index=False)
+    return df
+
+if __name__ == "__main__":
+    parseHistory()

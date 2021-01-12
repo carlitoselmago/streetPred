@@ -26,6 +26,29 @@ class helpers():
 
         return splitblocks-1
 
+    def selectTransportMode(self,transports):
+        candidate="walking"
+
+        if "CYCLING" in transports:
+            candidate="bike"
+        if "IN_BUS" in transports:
+            candidate="bus"
+
+        if "IN_PASSENGER_VEHICLE" in transports:
+            candidate="car"
+
+        if "IN_SUBWAY" in transports:
+            candidate="subway"
+
+        if "FLYING" in transports:
+            candidate="plane"
+
+        if "IN_FERRY" in transports:
+            candidate="boat"
+
+        return candidate
+
+
     def spreadBlocks(self,blocks,last):
         print("UNALTERED BLOCKS",blocks)
         spreaded=[]

@@ -35,15 +35,12 @@ from keras.layers.merge import Concatenate
 from sklearn import preprocessing
 
 from distanceParser import distanceParser
-from googleHistoryParser import _DAYSPLIT,catLocations
-
-
+from googleHistoryParser import _DAYSPLIT,catLocations, loadHistory
 
 class probAI():
-
     #using https://towardsdatascience.com/how-to-convert-pandas-dataframe-to-keras-rnn-and-back-to-pandas-for-multivariate-regression-dcc34c991df9
 
-    actTypes=14 #segun los datos hay 8 pero debería haber 6
+    actTypes=15 #segun los datos hay 8 pero debería haber 6
 
     lookbackLSTM=12
     batchSize=3
@@ -287,7 +284,25 @@ class probAI():
         fecha=datetime(row["year"],row["month"],row["dayofmonth"],int(hour))
         return fecha
 
+    def getSimilarTransportType(self,origin,destination,distancefromlast):
+        if origin==destination:
+            return False
+        #options: driving, walking, bicycling, transit (metro etc)
+        candidates=self.historyData[self.historyData.apply(lambda row: {destination[0],destination[1]} == set((row.lat, row.lon)), axis=1)]
+        #print("GET SIMILAR TRANSPORT _------------------------------------")
+        #print("candidates",candidates)
+        transport=candidates.lasttransport.mode().values[0]
+        print("transport",transport)
+
+        if transport=="bike":
+            return "bicycling"
+
+        sys.exit()
+        return False
+
+
     def predictBlocks(self,data,blocks):
+        self.historyData=data
         self.distanceParser=distanceParser()
         data=self.distanceParser.parseData(data)
         predicted=[]
@@ -309,37 +324,48 @@ class probAI():
                 hour=0
             lastDatetime=datetime(2025,last["month"],last["dayofmonth"],int(hour))
             lastDatetime=lastDatetime+timedelta(minutes=random.randint(0, 60))
-            if newRow["distancefromlast"]>0.001:
-                route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime)
+            print('newRow["distancefromlast"]',newRow["distancefromlast"])
+            route=False
+            if abs(newRow["distancefromlast"])>0.001: #TODO: fix the abs trick
+
+                transportMode=self.getSimilarTransportType((last["lat"],last["lon"]),(newRow["lat"],newRow["lon"]),newRow["distancefromlast"])
+                if transportMode:
+                    route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime,transportMode)
+                    routesTexts.append("<h4>transport mode: "+transportMode+"</h4>")
             else:
                 route=False
 
+            if route:
+                newTime=lastDatetime+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
+            else:
+                newTime=lastDatetime
 
-            newTime=lastDatetime+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
-            #place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow))+'</h3>'
-            place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newTime.strftime("%m/%d/%Y, %H:%M:%S"))+'</h3>'
-            if last["name"]!=newRow["name"]:
+            if route:
+                #place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow))+'</h3>'
+                place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newTime.strftime("%m/%d/%Y, %H:%M:%S"))+'</h3>'
+                if last["name"]!=newRow["name"]:
 
 
-                points.append((newRow["lat"],newRow["lon"]))
-                predicted.append(place)
+                    points.append((newRow["lat"],newRow["lon"]))
+                    predicted.append(place)
 
-                if route:
+                    if route:
 
-                    routes.append(json.dumps(route[0]["legs"])+"\n")#+";"+"\n")
-                    #predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
-                    for l in route[0]["legs"][0]["steps"]:
-                        #}print(l["html_instructions"])
-                        routesTexts.append(l["html_instructions"])
-                        if "steps" in l:
-                            for i in l["steps"]:
-                                routesTexts.append(i["html_instructions"])
-                    #for r in route:
-                    #    predicted.append(H.stripTags(r))
+                        routes.append(json.dumps(route[0]["legs"])+"\n")#+";"+"\n")
+                        #predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
+                        for l in route[0]["legs"][0]["steps"]:
+                            #}print(l["html_instructions"])
+                            routesTexts.append(l["html_instructions"])
+                            if "steps" in l:
+                                for i in l["steps"]:
+                                    routesTexts.append(i["html_instructions"])
+                        #for r in route:
+                        #    predicted.append(H.stripTags(r))
 
-                    #predicted.append("")
-                routesTexts.append(place)
-                data=data.append(newRow,ignore_index=True)
+                        #predicted.append("")
+                    routesTexts.append(place)
+            data=data.append(newRow,ignore_index=True)
+
 
         center=H.centerOfLocs(points)
         H.buildPredictedHtml(center,routesTexts,points,routes)
@@ -355,7 +381,7 @@ class probAI():
         originalInput=input.copy()
 
         #predicts dayblock activity and location, needs the whole data to measure scaling correctly, add target row as last with empty Y
-        input=input.drop(['name',"lat","lon","distancefromlast"], axis = 1)
+        input=input.drop(['name',"lat","lon","distancefromlast","lasttransport"], axis = 1)
 
         #input["type"]=pd.Categorical(input['type'])
         #input["type"]=input.type.cat.codes
@@ -392,7 +418,7 @@ class probAI():
         input=originalInput.copy()
 
 
-        input=input.drop(['name','lat','lon'], axis = 1)
+        input=input.drop(['name','lat','lon','lasttransport'], axis = 1)
 
         input["type"]=self.toCategorical(input["type"])
 
@@ -483,6 +509,9 @@ if __name__ == "__main__":
 
 
     #predict
+    historicRaw=loadHistory()
+    print("historicRaw",historicRaw)
+    """
 
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
     #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
@@ -495,3 +524,4 @@ if __name__ == "__main__":
     for b in blocks:
         print(b)
     #print(blocks["name"])
+    """
