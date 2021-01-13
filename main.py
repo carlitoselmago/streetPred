@@ -33,6 +33,7 @@ if not os.path.isdir("models/probAct"):
 
     AI.actTrain(dataset,100)
 else:
+
     print("loading pretrained actTrain")
 
 
@@ -41,7 +42,7 @@ if not os.path.isdir("models/probDistance"):
     data=pd.read_csv("data/PARSED/distancedtraindata.csv")
     print(data)
     #filter useful columns
-    data=data.drop(['name','lat','lon'], axis = 1)
+    data=data.drop(['name','lat','lon',"lasttransport"], axis = 1)
     print(data.dtypes)
 
     data["type"]=pd.Categorical(data['type'])
@@ -61,7 +62,7 @@ else:
 data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
 
-blocks=AI.predictBlocks(data,12)
+blocks=AI.predictBlocks(data,5)
 
 print("")
 print("------------------------------------------------------")

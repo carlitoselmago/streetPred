@@ -69,6 +69,18 @@ class helpers():
 
         return spreaded
 
+    def most_frequent(self,List): 
+        counter = 0
+        num = List[0]
+
+        for i in List:
+            curr_frequency = List.count(i)
+            if(curr_frequency> counter):
+                counter = curr_frequency
+                num = i
+
+        return num
+
     def validDayblocks(self,dayblocks):
 
         for b in dayblocks:

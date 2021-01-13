@@ -44,7 +44,7 @@ def groute(start,end,timet,mode="walking"):
 
 if __name__ == "__main__":
     now = datetime.now()
-    route=groute("41.3730711,2.1179825","41.3854471,2.1271785",now)
+    route=groute("42.3441206,-3.7297982","41.3617417,2.0952498",now,"transit")
     print(route)
 
 #graphic representation:

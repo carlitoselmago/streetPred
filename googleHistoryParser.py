@@ -147,8 +147,6 @@ def parseHistory():
                 print("daysplitIndex",daysplitIndex,"%%%%%%%%%%%%%%%%%%")
                 print("")
 
-
-
                 actT=None#defaultActivityType
 
                 actTDB=catLocations.loc[catLocations["id"]==placeID]["cat"].values[0]

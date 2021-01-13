@@ -203,16 +203,37 @@ class probAI():
 
         return model
 
-    def getPredLocation(self,lastloc,actType,distance,last):
+    def closestTypeLocation(self,lastloc,actType):
+        closestDistance=1000000000000000000000.0
+        closestLoc=False
+        closestName=""
+        for i,l in catLocations.iterrows():
+            cloc=(l["latitudeE7"]/ 1e7,l["longitudeE7"]/1e7)
+            if not math.isnan(cloc[0]):
+                if actType==l["cat"]:
+                    cdistance=self.distanceParser.calcDistance(lastloc,cloc)
+                    if cdistance<closestDistance:
+                        closestLoc=cloc
+                        closestDistance=cdistance
+                        closestName=l["name"]
+        print("closestLoc",closestLoc,"JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ")
+        if closestLoc:
+            return {"name":closestName,"lat":closestLoc[0],"lon":closestLoc[1]}
+        else:
+            return {"name":last["name"],"lat":float(last["lat"]),"lon":float(last["lon"])}
 
+
+    def getPredLocation(self,lastloc,actType,distance,last):
+        distance=abs(distance)
         #distance is in kilometers
         pad=0.2 #margin of distance
 
         lastloc=(float(lastloc[0]),float(lastloc[1]))
 
         if distance<=pad:
-            print("A",str(last["name"]))
-            return {"name":str(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
+            #print("A",str(last["name"]))
+            print("distancia es menor que pad-------")
+            return {"name":(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
 
         #define margins
         #m1=((loc[0]-distance),(loc[1]-distance))
@@ -226,7 +247,8 @@ class probAI():
 
                 cdistance=self.distanceParser.calcDistance(lastloc,cloc)
                 if distance < (cdistance+pad) and distance > (cdistance-pad) and actType==l["cat"]:
-                     candidates.append({"name":str(l["name"]),"lat":float(cloc[0]),"lon":float(cloc[1])})
+                    print("added candidate",l["name"],"OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+                    candidates.append({"name":l["name"],"lat":float(cloc[0]),"lon":float(cloc[1])})
                 #if loc[0]<m1[0] and loc[1]>m1[1] and loc[0]<m2[0] and loc[1]<m2[1]
                 if len(candidates)>4:
                     return random.choice(candidates)
@@ -234,11 +256,17 @@ class probAI():
         if len(candidates)>0:
             return candidates[-1]
         else:
+            #return the closest location of type
+            loc=self.closestTypeLocation(lastloc,actType)
+            if loc:
+                return {"name":loc["name"],"lat":float(loc["lat"]),"lon":float(loc["lon"])}
+            else:
+                return {"name":last["name"],"lat":float(last["lat"]),"lon":float(last["lon"])}
             #print(type(last["name"]))
             #print("B",str(last["name"].item()))
 
             #print(last)
-            return {"name":(last["name"]),"lat":float(last["lat"]),"lon":float(last["lon"])}
+            #return {"name":last["name"],"lat":float(last["lat"]),"lon":float(last["lon"])}
 
     def fillData(self,data,predicted):
         #fill data with trivial decisions
@@ -263,6 +291,7 @@ class probAI():
         predicted["timeblock"]=nowTimeBlock
 
         locpred=self.getPredLocation((float(lastRow["lat"]),float(lastRow["lon"])),str(predicted["type"]),float(predicted["distancefromlast"]),lastRow)
+        print("LOCPRED RESULT",locpred,"¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨")
         if isinstance(locpred["name"], pd.Series):
             name=locpred["name"].item()
         else:
@@ -284,21 +313,41 @@ class probAI():
         fecha=datetime(row["year"],row["month"],row["dayofmonth"],int(hour))
         return fecha
 
-    def getSimilarTransportType(self,origin,destination,distancefromlast):
-        if origin==destination:
+    def getSimilarTransportType(self,originName,destName,distancefromlast):
+        if originName==destName:
             return False
-        #options: driving, walking, bicycling, transit (metro etc)
-        candidates=self.historyData[self.historyData.apply(lambda row: {destination[0],destination[1]} == set((row.lat, row.lon)), axis=1)]
+        #inputs: bike, bus, car, subway, plane, boat
+        #output: driving, walking, bicycling, transit (metro etc)
+        #candidates=self.historyData[self.historyData.apply(lambda row: {destination[0],destination[1]} == set((row.lat, row.lon)), axis=1)]
+        #print(self.historyData)
+        candidates=[]
+        transport=""
+        for i,l in self.historyData.iterrows():
+            print("destName",destName,'l["name"]',l["name"])
+            if destName==l["name"]:
+                candidates.append(l["lasttransport"])
+
+
+        if len(candidates)>0:
+            #print("candidates",candidates)
+            transport=H.most_frequent(candidates)
+
+        #print("destination",destination)
         #print("GET SIMILAR TRANSPORT _------------------------------------")
         #print("candidates",candidates)
-        transport=candidates.lasttransport.mode().values[0]
-        print("transport",transport)
+        #transport=candidates.lasttransport.mode().values[0]
+        print("transport unproccesed",transport)
 
         if transport=="bike":
             return "bicycling"
 
-        sys.exit()
-        return False
+        if transport=="subway" or transport=="bus" or transport=="plane" or transport=="boat":
+            return "transit"
+
+        if transport=="car":
+            return "driving"
+
+        return "walking"
 
 
     def predictBlocks(self,data,blocks):
@@ -317,6 +366,7 @@ class probAI():
 
         for i in range(blocks):
             pred=self.predictBlock(data)
+            print("pred",pred)
             newRow=self.fillData(data,pred)
             last=data.iloc[-1]
             hour=int((last["timeblock"]*24)/_DAYSPLIT)-1
@@ -324,14 +374,16 @@ class probAI():
                 hour=0
             lastDatetime=datetime(2025,last["month"],last["dayofmonth"],int(hour))
             lastDatetime=lastDatetime+timedelta(minutes=random.randint(0, 60))
-            print('newRow["distancefromlast"]',newRow["distancefromlast"])
+
             route=False
             if abs(newRow["distancefromlast"])>0.001: #TODO: fix the abs trick
 
-                transportMode=self.getSimilarTransportType((last["lat"],last["lon"]),(newRow["lat"],newRow["lon"]),newRow["distancefromlast"])
+                transportMode=self.getSimilarTransportType(last["name"],newRow["name"],newRow["distancefromlast"])
+                print("transportMode",transportMode)
                 if transportMode:
                     route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime,transportMode)
                     routesTexts.append("<h4>transport mode: "+transportMode+"</h4>")
+
             else:
                 route=False
 
@@ -345,12 +397,10 @@ class probAI():
                 place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newTime.strftime("%m/%d/%Y, %H:%M:%S"))+'</h3>'
                 if last["name"]!=newRow["name"]:
 
-
                     points.append((newRow["lat"],newRow["lon"]))
                     predicted.append(place)
 
                     if route:
-
                         routes.append(json.dumps(route[0]["legs"])+"\n")#+";"+"\n")
                         #predicted.append("TRANSITO ")#+str(newRow["distancefromlast"]))
                         for l in route[0]["legs"][0]["steps"]:
@@ -359,12 +409,11 @@ class probAI():
                             if "steps" in l:
                                 for i in l["steps"]:
                                     routesTexts.append(i["html_instructions"])
-                        #for r in route:
-                        #    predicted.append(H.stripTags(r))
 
-                        #predicted.append("")
                     routesTexts.append(place)
             data=data.append(newRow,ignore_index=True)
+            print("updated data")
+            print(data)
 
 
         center=H.centerOfLocs(points)
