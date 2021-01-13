@@ -11,6 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 from googledirections import *
 from helpers import helpers
 import json
+from time import sleep
 H=helpers()
 
 #keras
@@ -226,7 +227,7 @@ class probAI():
     def getPredLocation(self,lastloc,actType,distance,last):
         distance=abs(distance)
         #distance is in kilometers
-        pad=0.2 #margin of distance
+        pad=0.1 #margin of distance
 
         lastloc=(float(lastloc[0]),float(lastloc[1]))
 
@@ -290,6 +291,13 @@ class probAI():
         predicted["year"]=nowDay.year
         predicted["timeblock"]=nowTimeBlock
 
+        ###########################
+        #CONFINAMIENTO HACK
+        ###########################
+        if predicted["timeblock"]>4 or predicted["timeblock"]<2:
+            #forzar confinamiento
+            predicted["type"]="Home"
+
         locpred=self.getPredLocation((float(lastRow["lat"]),float(lastRow["lon"])),str(predicted["type"]),float(predicted["distancefromlast"]),lastRow)
         print("LOCPRED RESULT",locpred,"¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨")
         if isinstance(locpred["name"], pd.Series):
@@ -313,8 +321,9 @@ class probAI():
         fecha=datetime(row["year"],row["month"],row["dayofmonth"],int(hour))
         return fecha
 
-    def getSimilarTransportType(self,originName,destName,distancefromlast):
+    def getSimilarTransportType(self,originName,destName,distancefromlast,distanceToDestination):
         if originName==destName:
+            print("SAME ORIGIN AND DESTINATION return false")
             return False
         #inputs: bike, bus, car, subway, plane, boat
         #output: driving, walking, bicycling, transit (metro etc)
@@ -323,8 +332,10 @@ class probAI():
         candidates=[]
         transport=""
         for i,l in self.historyData.iterrows():
-            print("destName",destName,'l["name"]',l["name"])
+            #print("destName",destName,'l["name"]',l["name"])
+            #sleep(0.1)
             if destName==l["name"]:
+                #print("LAST T MATCH")
                 candidates.append(l["lasttransport"])
 
 
@@ -346,6 +357,9 @@ class probAI():
 
         if transport=="car":
             return "driving"
+
+        if distanceToDestination>5.0:
+            return "transit"
 
         return "walking"
 
@@ -377,12 +391,12 @@ class probAI():
 
             route=False
             if abs(newRow["distancefromlast"])>0.001: #TODO: fix the abs trick
-
-                transportMode=self.getSimilarTransportType(last["name"],newRow["name"],newRow["distancefromlast"])
+                distanceToDestination=self.distanceParser.calcDistance((last["lat"],last["lon"]),(newRow["lat"],newRow["lon"]) )
+                transportMode=self.getSimilarTransportType(last["name"],newRow["name"],newRow["distancefromlast"],distanceToDestination)
                 print("transportMode",transportMode)
                 if transportMode:
                     route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime,transportMode)
-                    routesTexts.append("<h4>transport mode: "+transportMode+"</h4>")
+                    routesTexts.append("<h4>TRANSPORT: "+transportMode+"</h4>")
 
             else:
                 route=False

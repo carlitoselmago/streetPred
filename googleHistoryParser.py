@@ -111,7 +111,7 @@ def parseHistory():
                                     lastAct["dayofweek"]=lastAct["dayofweek"]+1
                                     lastAct["dayofmonth"]=lastAct["dayofmonth"]+1
                                 lastAct["timeblock"]=ds
-                                lastAct["name"]="::::REST DAY::::"
+                                lastAct["name"]=lastAct["name"]#"::::REST DAY::::"
                                 emptyDay[ds]=lastAct
                             TRAINBLOCKS.append(emptyDay)
 

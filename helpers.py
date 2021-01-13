@@ -69,7 +69,7 @@ class helpers():
 
         return spreaded
 
-    def most_frequent(self,List): 
+    def most_frequent(self,List):
         counter = 0
         num = List[0]
 
@@ -141,6 +141,11 @@ class helpers():
                     text-align: center;
                     line-height: 22px;
                     margin-right: 12px;
+            }
+            h4 {
+                margin-bottom: -12px;
+                text-transform: uppercase;
+                margin-top: 0px;
             }
           </style>
 
