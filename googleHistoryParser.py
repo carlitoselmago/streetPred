@@ -207,7 +207,7 @@ def parseHistory():
 
     new = []
     with open("data/PARSED/placeshistory.csv",'r',encoding='utf-8') as file2:
-        reader = csv.DictReader(file2)
+        reader = csv.DictReader(file2, fieldnames=placesCSV[0].keys())
         csvlist=list(reader)
         #reader = csv.reader(file2,delimiter=',',skipinitialspace=True)
         #header = next(reader)
