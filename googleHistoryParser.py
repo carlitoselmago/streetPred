@@ -201,15 +201,43 @@ def parseHistory():
             place["address"]=""
         place["id"]=id
         placesCSV.append(place)
-    #print(placesCSV)
 
+    #placesCSV.append({"id":"121111111111124234234","latitudeE7":"111","longitudeE7":"222","address":"calle mentira","name":"holi"})
+    #replaced google drive with local file
+
+    new = []
+    with open("data/PARSED/placeshistory.csv",'r',encoding='utf-8') as file2:
+        reader = csv.DictReader(file2)
+        csvlist=list(reader)
+        #reader = csv.reader(file2,delimiter=',',skipinitialspace=True)
+        #header = next(reader)
+        #csvlist = [dict(zip(header, map(str, row))) for row in reader]
+
+        for prow in placesCSV:
+            #if row[0] != "id":
+            found=False
+            for row in csvlist:
+
+                if row["id"] == prow["id"]:
+                    found=True
+            if not found:
+            #if row not in new and row not in placesCSV:
+                new.append(prow)
+
+    if len(new)>0:
+
+        with open("data/PARSED/placeshistory.csv",'a+', encoding='utf8', newline='') as f:
+            fc = csv.DictWriter(f, fieldnames=new[0].keys())
+            fc.writerows(new)
+            #fd.write(row)
+    """
     f = open("data/PARSED/placeshistory.csv", "w",encoding='utf-8',newline='')
     writer = csv.DictWriter(
         f, fieldnames=["id", "latitudeE7","longitudeE7","address","name"])
     writer.writeheader()
     writer.writerows(placesCSV)
     f.close()
-
+    """
 
     ##### WRITE TRAIN DATA
     print("")

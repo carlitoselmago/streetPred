@@ -217,7 +217,7 @@ class probAI():
                         closestLoc=cloc
                         closestDistance=cdistance
                         closestName=l["name"]
-        print("closestLoc",closestLoc,"JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ")
+        #print("closestLoc",closestLoc,"JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ")
         if closestLoc:
             return {"name":closestName,"lat":closestLoc[0],"lon":closestLoc[1]}
         else:
@@ -393,7 +393,7 @@ class probAI():
             if abs(newRow["distancefromlast"])>0.001: #TODO: fix the abs trick
                 distanceToDestination=self.distanceParser.calcDistance((last["lat"],last["lon"]),(newRow["lat"],newRow["lon"]) )
                 transportMode=self.getSimilarTransportType(last["name"],newRow["name"],newRow["distancefromlast"],distanceToDestination)
-                print("transportMode",transportMode)
+                #print("transportMode",transportMode)
                 if transportMode:
                     route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime,transportMode)
                     routesTexts.append("<h4>TRANSPORT: "+transportMode+"</h4>")
@@ -431,7 +431,7 @@ class probAI():
 
 
         center=H.centerOfLocs(points)
-        H.buildPredictedHtml(center,routesTexts,points,routes)
+        H.buildPredictedHtml(center,routesTexts,points,routes,str(newTime.strftime("%m-%d-%Y, %H.%M.%S")))
 
         #return data.tail(blocks)
         return predicted

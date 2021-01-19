@@ -108,7 +108,7 @@ class helpers():
         return center
 
 
-    def buildPredictedHtml(self,center,texts,points,routes=False):
+    def buildPredictedHtml(self,center,texts,points,routes=False,name=""):
         HTML="""
         <!DOCTYPE html><html lang="es">
 
@@ -223,6 +223,6 @@ class helpers():
 
 
 
-        Html_file= open("predicted/borrame.html","w")
+        Html_file= open("predicted/predicted_"+name+".html","w")
         Html_file.write(HTML)
         Html_file.close()
