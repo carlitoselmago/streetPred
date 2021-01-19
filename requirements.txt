@@ -9,3 +9,4 @@ requests>=2.23
 Rtree>=0.9
 Shapely>=1.7
 googlemaps
+#conda install -c conda-forge keras=2.4.3
