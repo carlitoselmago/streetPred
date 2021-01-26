@@ -1,3 +1,4 @@
+#conda install -c conda-forge keras=2.4.3
 descartes>=1.1
 geopandas>=0.7
 matplotlib>=3.2
@@ -9,4 +10,6 @@ requests>=2.23
 Rtree>=0.9
 Shapely>=1.7
 googlemaps
-#conda install -c conda-forge keras=2.4.3
+sklearn
+geopy
+silence_tensorflow

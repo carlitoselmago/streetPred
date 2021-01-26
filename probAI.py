@@ -386,6 +386,10 @@ class probAI():
             hour=int((last["timeblock"]*24)/_DAYSPLIT)-1
             if hour<0:
                 hour=0
+
+            lastDatetimeReal=datetime(last["year"],last["month"],last["dayofmonth"],int(hour))
+            lastDatetimeReal=lastDatetimeReal+timedelta(minutes=random.randint(0, 60))
+
             lastDatetime=datetime(2025,last["month"],last["dayofmonth"],int(hour))
             lastDatetime=lastDatetime+timedelta(minutes=random.randint(0, 60))
 
@@ -402,9 +406,10 @@ class probAI():
                 route=False
 
             if route:
-                newTime=lastDatetime+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
+
+                newTime=lastDatetimeReal+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
             else:
-                newTime=lastDatetime
+                newTime=lastDatetimeReal
 
             if route:
                 #place='<h3><span class="numero">'+str(len(points)+1)+'</span>'+str(newRow["name"])+"  "+str(newRow["dayofmonth"])+"."+str(newRow["month"])+"."+str(newRow["year"])+"  "+str(self.timeblock2Hour(newRow))+'</h3>'

@@ -206,23 +206,25 @@ def parseHistory():
     #replaced google drive with local file
 
     new = []
-    with open("data/PARSED/placeshistory.csv",'r',encoding='utf-8') as file2:
-        reader = csv.DictReader(file2, fieldnames=placesCSV[0].keys())
-        csvlist=list(reader)
+    csvlistDF = pd.read_csv("data/PARSED/placeshistory.csv")
+    csvlist=csvlistDF.T.to_dict().values()
+    #with open("data/PARSED/placeshistory.csv",'r',encoding='utf-8') as file2:
+    #    reader = csv.DictReader(file2, fieldnames=placesCSV[0].keys())
+    #    csvlist=list(reader)
         #reader = csv.reader(file2,delimiter=',',skipinitialspace=True)
         #header = next(reader)
         #csvlist = [dict(zip(header, map(str, row))) for row in reader]
 
-        for prow in placesCSV:
-            #if row[0] != "id":
-            found=False
-            for row in csvlist:
-
-                if row["id"] == prow["id"]:
-                    found=True
-            if not found:
-            #if row not in new and row not in placesCSV:
-                new.append(prow)
+    for prow in placesCSV:
+        #if row[0] != "id":
+        found=False
+        for row in csvlist:
+            #print(row["id"],prow["id"])
+            if row["id"] == prow["id"]:
+                found=True
+        if not found:
+        #if row not in new and row not in placesCSV:
+            new.append(prow)
 
     if len(new)>0:
 
