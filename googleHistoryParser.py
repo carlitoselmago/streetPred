@@ -148,26 +148,29 @@ def parseHistory():
                 print("")
 
                 actT=None#defaultActivityType
-
-                actTDB=catLocations.loc[catLocations["id"]==placeID]["cat"].values[0]
-                if not pd.isnull(actTDB):
-                    actT=actTDB
-
-                dayofweek=fechaTiempo.weekday()
-                month=fechaTiempo.month
-                year=fechaTiempo.year
-                dayofmonth=fechaTiempo.day
-
-                activity={"type":actT,"duration":duration,"name":placeName,"placeid":placeID,"dayofmonth":dayofmonth,"dayofweek":dayofweek,"month":month,"year":year,"lat":p["location"]["latitudeE7"]/ 1e7,"lon":p["location"]["longitudeE7"]/ 1e7,"lasttransport":H.selectTransportMode(travelMoves)}
-
-                travelMoves=[]
-
                 try:
-                    if duration>dayBlocks[daysplitIndex]["duration"]:
+                    actTDB=catLocations.loc[catLocations["id"]==placeID]["cat"].values[0]
+                    if not pd.isnull(actTDB):
+                        actT=actTDB
+
+                    dayofweek=fechaTiempo.weekday()
+                    month=fechaTiempo.month
+                    year=fechaTiempo.year
+                    dayofmonth=fechaTiempo.day
+
+                    activity={"type":actT,"duration":duration,"name":placeName,"placeid":placeID,"dayofmonth":dayofmonth,"dayofweek":dayofweek,"month":month,"year":year,"lat":p["location"]["latitudeE7"]/ 1e7,"lon":p["location"]["longitudeE7"]/ 1e7,"lasttransport":H.selectTransportMode(travelMoves)}
+
+                    travelMoves=[]
+
+                    try:
+                        if duration>dayBlocks[daysplitIndex]["duration"]:
+                            dayBlocks[daysplitIndex]=activity
+                    except:
+
                         dayBlocks[daysplitIndex]=activity
                 except:
-
-                    dayBlocks[daysplitIndex]=activity
+                    print("not found act",p)
+                    #sys.exit()
 
         if "activitySegment" in p:
             #transito
