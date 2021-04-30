@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import re
+import os
 import xml
 
 class helpers():
@@ -225,7 +226,8 @@ class helpers():
 
         HTML+='</div></body></html>'
 
-
+        if not os.path.exists('predicted'):
+            os.makedirs('predicted')
 
         Html_file= open("predicted/predicted_"+name+".html","w")
         Html_file.write(HTML)

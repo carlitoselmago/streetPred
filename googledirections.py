@@ -1,6 +1,12 @@
+import sys
 import googlemaps
 from datetime import datetime
-import config
+
+try:
+    from config import config
+except:
+    print("No existe el archivo config, stop")
+    sys.exit()
 from helpers import helpers
 H=helpers()
 

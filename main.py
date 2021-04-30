@@ -19,7 +19,7 @@ if not os.path.isdir("models/probAct"):
     data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 
     #filter useful columns
-    dataset=data.drop(['name', 'duration',"placeid","lat","lon","lasttransport"], axis = 1)
+    dataset=data.drop(['name', 'duration',"placeid","lat","lon","lasttransport","year"], axis = 1)
     #dataset=data.drop(['name', 'duration',"placeid","dayofmonth"], axis = 1)
 
 

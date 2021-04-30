@@ -294,9 +294,9 @@ class probAI():
         ###########################
         #CONFINAMIENTO HACK
         ###########################
-        if predicted["timeblock"]>4 or predicted["timeblock"]<2:
+        #if predicted["timeblock"]>4 or predicted["timeblock"]<2:
             #forzar confinamiento
-            predicted["type"]="Home"
+        #    predicted["type"]="Home"
 
         locpred=self.getPredLocation((float(lastRow["lat"]),float(lastRow["lon"])),str(predicted["type"]),float(predicted["distancefromlast"]),lastRow)
         print("LOCPRED RESULT",locpred,"¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨")
@@ -449,7 +449,7 @@ class probAI():
         originalInput=input.copy()
 
         #predicts dayblock activity and location, needs the whole data to measure scaling correctly, add target row as last with empty Y
-        input=input.drop(['name',"lat","lon","distancefromlast","lasttransport"], axis = 1)
+        input=input.drop(['name',"year","lat","lon","distancefromlast","lasttransport"], axis = 1)
 
         #input["type"]=pd.Categorical(input['type'])
         #input["type"]=input.type.cat.codes
