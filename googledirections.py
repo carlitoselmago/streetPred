@@ -3,7 +3,7 @@ import googlemaps
 from datetime import datetime
 
 try:
-    from config import config
+    from config import *
 except:
     print("No existe el archivo config, stop")
     sys.exit()
