@@ -209,7 +209,7 @@ def parseHistory():
     #replaced google drive with local file
 
     new = []
-    csvlistDF = pd.read_csv("data/PARSED/placeshistory.csv")
+    csvlistDF = pd.read_csv("data/PARSED/placeshistory.csv",error_bad_lines=False)
     csvlist=csvlistDF.T.to_dict().values()
     #with open("data/PARSED/placeshistory.csv",'r',encoding='utf-8') as file2:
     #    reader = csv.DictReader(file2, fieldnames=placesCSV[0].keys())
