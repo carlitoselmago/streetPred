@@ -62,7 +62,7 @@ else:
 data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
 
-blocks=AI.predictBlocks(data,12) #6= 1 dia
+blocks=AI.predictBlocks(data,24) #6= 1 dia
 
 print("")
 print("------------------------------------------------------")
