@@ -7,8 +7,8 @@ import geopy.distance
 class distanceParser():
 
     dataDistancedFile='data/PARSED/distancedtraindata.csv'
-    maxKm=1500.0 #max distance traveled
-    maxSmallKm=40.0 #average local max distance
+    maxKm=2500.0 #max distance traveled #prev 1500
+    maxSmallKm=2.0 #average local max distance #prev 40
 
     def __init__(self):
         pass

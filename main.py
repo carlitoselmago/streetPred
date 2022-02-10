@@ -1,9 +1,12 @@
-import pandas as pd
 import os
+import configparser
+import pandas as pd
 
-from googleHistoryParser import parseHistory,loadHistory
+from googleHistoryParser import loadHistory, parseHistory
 from probAI import probAI
 
+config = configparser.ConfigParser()
+config.read('settings.ini')
 AI=probAI()
 
 #history=parseHistory()
@@ -30,7 +33,7 @@ if not os.path.isdir("models/probAct"):
     #sys.exit()
     #plt.plot(dataset["dayofweek"])
     #plt.show()
-
+    print(dataset)
     AI.actTrain(dataset,100)
 else:
 
@@ -40,15 +43,15 @@ else:
 if not os.path.isdir("models/probDistance"):
     #distance train
     data=pd.read_csv("data/PARSED/distancedtraindata.csv")
-    print(data)
+    #print(data)
     #filter useful columns
     data=data.drop(['name','lat','lon',"lasttransport"], axis = 1)
-    print(data.dtypes)
+    #print(data.dtypes)
 
     data["type"]=pd.Categorical(data['type'])
     data["type"]=data.type.cat.codes
     #pd.set_option('display.max_rows', dataset.shape[0]+1)
-    print(data)
+    #print(data)
     #sys.exit()
     #plt.plot(dataset["dayofweek"])
     #plt.show()
@@ -62,7 +65,7 @@ else:
 data=pd.read_csv("data/PARSED/acttypetraindata.csv")
 #data=data.drop(['name',"dayofmonth","lat","lon"], axis = 1)
 
-blocks=AI.predictBlocks(data,24) #6= 1 dia
+blocks=AI.predictBlocks(data,config["base"]) 
 
 print("")
 print("------------------------------------------------------")

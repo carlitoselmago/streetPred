@@ -51,7 +51,7 @@ class helpers():
 
 
     def spreadBlocks(self,blocks,last):
-        print("UNALTERED BLOCKS",blocks)
+        #print("UNALTERED BLOCKS",blocks)
         spreaded=[]
         for i,b in enumerate(blocks):
             if i==0 and not b:

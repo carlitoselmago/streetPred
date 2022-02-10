@@ -35,6 +35,7 @@ from keras.layers import Input
 from keras.layers.merge import Concatenate
 from sklearn import preprocessing
 
+
 from distanceParser import distanceParser
 from googleHistoryParser import _DAYSPLIT,catLocations, loadHistory
 
@@ -54,6 +55,7 @@ class probAI():
         print("Probabilistic AI init")
         print("::::::::::::::::::::::")
         print("")
+
 
     def distanceTrain(self,df,epochs=10):
         print("train df")
@@ -98,8 +100,8 @@ class probAI():
         plt.plot(range(len(loss_per_epoch)),loss_per_epoch);
         plt.show()
 
-    def actTrain(self,df,epochs=100):
-
+    def actTrain(self,df,epochsn=0):
+        
         scaleY=False
 
         #:::::::::::::::::::::::::::::
@@ -114,7 +116,6 @@ class probAI():
 
         X_train = train.drop(y_col,axis=1).copy()
         y_train = train[[y_col]].copy() # the double brakets here are to keep the y in dataframe format, otherwise it will be pandas Series
-
         Xscaler = MinMaxScaler(feature_range=(0, 1)) # scale so that all the X data will range from 0 to 1
         Xscaler.fit(X_train)
         scaled_X_train = Xscaler.transform(X_train)
@@ -135,7 +136,7 @@ class probAI():
 
         n_input = 25 #how many samples/rows/timesteps to look in the past in order to forecast the next sample
         n_features= X_train.shape[1] # how many predictors/Xs/features we have to predict y
-        b_size = 32 # Number of timeseries samples in each batch
+        b_size = 10 # Number of timeseries samples in each batch
 
         model=self.actModel(n_input,n_features)
 
@@ -145,11 +146,10 @@ class probAI():
             generator = TimeseriesGenerator(scaled_X_train, y_train, length=n_input, batch_size=b_size)
 
 
-        if scaleY:
-            model.fit_generator(generator,epochs=epochs)
-        else:
-            model.fit_generator(generator,epochs=epochs)
-             #model.fit(scaled_X_train, y_train, batch_size=b_size)
+        print("epochsn",epochsn)
+        model.fit_generator(generator,epochs=epochsn)
+    
+        #model.fit(scaled_X_train, y_train, batch_size=b_size)
         self.saveModel(model,"probAct")
 
         loss_per_epoch = model.history.history['loss']
@@ -187,6 +187,7 @@ class probAI():
     def distanceModel(self,n_input, n_features):
         model = Sequential()
         model.add(LSTM(150, activation='relu', input_shape=(n_input, n_features)))
+        model.add(Dropout(0.2))
         model.add(Dense(1))
         model.compile(optimizer='adam', loss='mse')
         model.summary()
@@ -197,9 +198,10 @@ class probAI():
         model = keras.models.Sequential()
         model.add(keras.layers.LSTM(250, activation='relu', input_shape=(n_input, n_features), return_sequences=False))
         model.add(keras.layers.Dense(self.actTypes*2,  activation='relu'))
-        model.add(keras.layers.Dense(self.actTypes, activation='sigmoid'))
+        model.add(Dropout(0.2))
+        model.add(keras.layers.Dense(self.actTypes, activation='softmax'))
 
-        model.compile(optimizer='adam', loss='binary_crossentropy')
+        model.compile(optimizer='adam', loss='categorical_crossentropy',metrics=['accuracy'])
         model.summary()
 
         return model
@@ -363,8 +365,23 @@ class probAI():
 
         return "walking"
 
+    def sample(self,preds, temperature=0.8):
+        # helper function to sample an index from a probability array
+        preds = np.asarray(preds).astype('float64')
+        preds = np.log(preds) / temperature
+        exp_preds = np.exp(preds)
+        preds = exp_preds / np.sum(exp_preds)
+        probas = np.random.multinomial(1, preds, 1)
+        return np.argmax(probas)
 
-    def predictBlocks(self,data,blocks):
+    def getDateFromstring(self,stringdate):
+        parts=stringdate.split(",")
+        return datetime(int(parts[0]),int(parts[1]),int(parts[2]))
+
+    def predictBlocks(self,data,config):
+
+        dateStart=self.getDateFromstring(config["date"])
+        numblocks=int(config["days"])*_DAYSPLIT
         self.historyData=data
         self.distanceParser=distanceParser()
         data=self.distanceParser.parseData(data)
@@ -378,8 +395,8 @@ class probAI():
         points.append((last["lat"],last["lon"]))
         routesTexts.append('<h3><span class="numero">0</span>'+str(last["name"].replace("::::REST DAY::::","Hogar"))+"  "+str(self.timeblock2Hour(last))+'</h3>')
 
-        for i in range(blocks):
-            pred=self.predictBlock(data)
+        for i in range(numblocks):
+            pred=self.predictBlock(data,config)
             print("pred",pred)
             newRow=self.fillData(data,pred)
             last=data.iloc[-1]
@@ -387,10 +404,11 @@ class probAI():
             if hour<0:
                 hour=0
 
-            lastDatetimeReal=datetime(last["year"],last["month"],last["dayofmonth"],int(hour))
+            #lastDatetimeReal=datetime(last["year"],last["month"],last["dayofmonth"],int(hour))
+            lastDatetimeReal=dateStart
             lastDatetimeReal=lastDatetimeReal+timedelta(minutes=random.randint(0, 60))
 
-            lastDatetime=datetime(2025,last["month"],last["dayofmonth"],int(hour))
+            lastDatetime=datetime(2035,last["month"],last["dayofmonth"],int(hour))
             lastDatetime=lastDatetime+timedelta(minutes=random.randint(0, 60))
 
             route=False
@@ -442,8 +460,8 @@ class probAI():
         return predicted
 
 
-    def predictBlock(self,input):
-
+    def predictBlock(self,input,config):
+        temperature=float(config["temperature"])
         lookBackLength=25
 
         originalInput=input.copy()
@@ -474,8 +492,24 @@ class probAI():
 
         #p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(len(Xpredict)), length=25, batch_size=32)
         p_generator = TimeseriesGenerator(scaled_X_test, np.zeros(lookBackLength), length=1, batch_size=32)
+        #print("Xpredict",Xpredict)
+        ActProb= actModel.predict(p_generator) #tokenized prediction
 
-        ActPred= actModel.predict_classes(p_generator) #tokenized prediction
+        #we get probabilities, sample with temperature
+        ActPred=[]
+        for a in ActProb:
+            """
+            print("::::::::::::::::::::::::::::::::::::::::::::")
+            print(temperature)
+            print(a)
+            """
+            chosen=self.sample(a,temperature) #XXXX
+            #dist = RelaxedOneHotCategorical(temperature, logits=a)
+            #print(chosen)
+            #print("")
+            ActPred.append(chosen)
+
+        print("ActPred",ActPred)
         ActString=self.inverseCategorical(ActPred)
 
 
@@ -550,7 +584,7 @@ if __name__ == "__main__":
         #plt.plot(dataset["dayofweek"])
         #plt.show()
 
-        AI.actTrain(dataset,100)
+        AI.actTrain(dataset,10)
     else:
         print("loading pretrained actTrain")
 

@@ -79,16 +79,16 @@ def parseHistory():
             if day<fecha:
                 delta = fecha - day
                 diasentre=(delta.days)
-                print("")
-                print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
-                print("")
+                #print("")
+                #print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+                #print("")
 
                 #DAY BLOCK :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 dayBlocks=H.spreadBlocks(dayBlocks,lastBlock)
-                print("¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿")
-                print ("dayBlocks",dayBlocks)
-                print("¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿")
-                print("")
+                #print("¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿")
+                #print ("dayBlocks",dayBlocks)
+                #print("¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿")
+                #print("")
 
                 if H.validDayblocks(dayBlocks):
                     TRAINBLOCKS.append(dayBlocks)
@@ -115,10 +115,10 @@ def parseHistory():
                                 emptyDay[ds]=lastAct
                             TRAINBLOCKS.append(emptyDay)
 
-                            print("STAYHOMA!")
-                            print("")
-                            print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
-                            print("")
+                            #print("STAYHOMA!")
+                            #print("")
+                            #print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+                            #print("")
 
             day=fecha
 
@@ -139,13 +139,13 @@ def parseHistory():
 
 
             if duration>0.001:
-                print(fechaTiempo,placeName)
-                print("duracion",str(duration)+"h")
+                #print(fechaTiempo,placeName)
+                #print("duracion",str(duration)+"h")
 
                 daysplitIndex=H.timeBlockIndex(_DAYSPLIT,float(p["duration"]["startTimestampMs"]),float(p["duration"]["endTimestampMs"]))
 
-                print("daysplitIndex",daysplitIndex,"%%%%%%%%%%%%%%%%%%")
-                print("")
+                #print("daysplitIndex",daysplitIndex,"%%%%%%%%%%%%%%%%%%")
+                #print("")
 
                 actT=None#defaultActivityType
                 try:
@@ -169,7 +169,8 @@ def parseHistory():
 
                         dayBlocks[daysplitIndex]=activity
                 except:
-                    print("not found act",p)
+                    pass
+                    #print("not found act",p)
                     #sys.exit()
 
         if "activitySegment" in p:
@@ -179,7 +180,7 @@ def parseHistory():
             fecha=fechaTiempo.date()
 
             try:
-                print(p["activitySegment"]["activityType"],"---------------------------------------------->")
+                #print(p["activitySegment"]["activityType"],"---------------------------------------------->")
                 travelMoves.append(p["activitySegment"]["activityType"])
             except:
                 pass
@@ -263,14 +264,14 @@ def parseHistory():
                 INDBLOCKS.append(bb)
                 #print (bb)
 
-    print("")
-    print("TRAINBLOCKS")
+    #print("")
+    #print("TRAINBLOCKS")
     df = pd.DataFrame(INDBLOCKS)
 
     #drop rows wich dont have a type category
     df.dropna(subset=['type'], inplace=True)
 
-    print(df)
+    #print(df)
     df.to_csv('data/PARSED/acttypetraindata.csv',index=False)
     return df
 
