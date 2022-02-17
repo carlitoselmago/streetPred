@@ -7,3 +7,6 @@
 -run python googleHistoryParser.py
 -run python distanceParser.py
 -run python main.py for predictions
+
+#settings
+If you don't have a settings.ini file, rename settings_default.ini to settings.ini and use it to control predictions
