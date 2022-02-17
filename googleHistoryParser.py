@@ -255,8 +255,8 @@ def parseHistory():
         for i,b in enumerate(tb):
             bb=b
             bb["timeblock"]=i
-            #if bb["type"]!="-":
-
+            if bb["type"]!="-":
+                 bb["type"]="Oci"
             if len(INDBLOCKS)>2:
                 if bb["timeblock"]==0 and bb["dayofweek"]==INDBLOCKS[i-1]["dayofweek"]:
                     bb["dayofweek"]+=1

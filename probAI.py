@@ -201,7 +201,7 @@ class probAI():
         model.add(Dropout(0.2))
         model.add(keras.layers.Dense(self.actTypes, activation='softmax'))
 
-        model.compile(optimizer='adam', loss='categorical_crossentropy',metrics=['accuracy'])
+        model.compile(optimizer='adam', loss='categorical_crossentropy')
         model.summary()
 
         return model
@@ -504,6 +504,7 @@ class probAI():
 
         #input["type"]=pd.Categorical(input['type'])
         #input["type"]=input.type.cat.codes
+        print('input["type"]',input["type"])
         input["type"]=self.toCategorical(input["type"])
         #input["type"]=input["type"].astype('category')
 
