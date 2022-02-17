@@ -192,7 +192,7 @@ class helpers():
                 styles:stylesArray,
         """
         HTML+='center: new google.maps.LatLng('+str(center[0])+', '+str(center[1])+'),'+"\n"
-        HTML+='zoom: 13,'+"\n"
+        HTML+='zoom: 8,'+"\n"
         HTML+="""
                   mapTypeId: google.maps.MapTypeId.ROADMAP
                 });

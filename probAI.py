@@ -446,12 +446,12 @@ class probAI():
                 print("transportMode",transportMode)
                 if transportMode:
                     route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime,transportMode)
-                    #print("route:::::",route)
+                  
                     routesTexts.append("<h4>TRANSPORT: "+transportMode+"</h4>")
 
             else:
                 route=False
-            #print("route check",route)
+           
             if route:
 
                 newTime=lastDatetimeReal+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
@@ -473,16 +473,16 @@ class probAI():
                             #}print(l["html_instructions"])
                             routesTexts.append(l["html_instructions"])
                             if "steps" in l:
-                                for i in l["steps"]:
-                                    if "html_instructions" in i:
-                                        routesTexts.append(i["html_instructions"])
+                                for ii in l["steps"]:
+                                    if "html_instructions" in ii:
+                                        routesTexts.append(ii["html_instructions"])
                                     else:
-                                        pass
+                                        print("NO HTML INSTRUCTIONS FOUND!!")
 
                     routesTexts.append(place)
             data=data.append(newRow,ignore_index=True)
-            print("updated data")
-            print("i",i)
+            #print("updated data")
+           
             print(data.tail(i+1))
 
 

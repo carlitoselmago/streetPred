@@ -20,7 +20,7 @@ def groute(start,end,timet,mode="walking"):
         #last_monday = today - datetime.timedelta(days=today.weekday())
         timet= today + timedelta( (4-today.weekday()) % 7 )
   
-    print(timet)
+    
     #print("timet",str(int(timet.timestamp())))
     #timet=(int(timet.timestamp()))
     # Geocoding an address
