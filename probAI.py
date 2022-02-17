@@ -404,6 +404,11 @@ class probAI():
             data = data[data.date < dateStart]
             data.drop(["date"], axis = 1)
 
+        if bool(config["nohome"]):
+            print("DELETING HOME!")
+            data.drop(data.index[data['type'] == 'Home'], inplace=True)
+            
+        print(data)
         numblocks=int(config["days"])*_DAYSPLIT
         self.historyData=data
         self.distanceParser=distanceParser()
@@ -417,7 +422,7 @@ class probAI():
         last=data.iloc[-1]
         points.append((last["lat"],last["lon"]))
         routesTexts.append('<h3><span class="numero">0</span>'+str(last["name"].replace("::::REST DAY::::","Hogar"))+"  "+str(self.timeblock2Hour(last))+'</h3>')
-
+   
         for i in range(numblocks):
             pred=self.predictBlock(data,config)
             print("pred",pred)
@@ -427,8 +432,8 @@ class probAI():
             if hour<0:
                 hour=0
 
-            #lastDatetimeReal=datetime(last["year"],last["month"],last["dayofmonth"],int(hour))
-            lastDatetimeReal=dateStart
+            lastDatetimeReal=datetime(last["year"],last["month"],last["dayofmonth"],int(hour))
+            #lastDatetimeReal=dateStart
             lastDatetimeReal=lastDatetimeReal+timedelta(minutes=random.randint(0, 60))
 
             lastDatetime=datetime(2035,last["month"],last["dayofmonth"],int(hour))
@@ -477,7 +482,8 @@ class probAI():
                     routesTexts.append(place)
             data=data.append(newRow,ignore_index=True)
             print("updated data")
-            print(data)
+            print("i",i)
+            print(data.tail(i+1))
 
 
         center=H.centerOfLocs(points)
