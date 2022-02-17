@@ -1,6 +1,7 @@
 import sys
 import googlemaps
-from datetime import datetime
+from datetime import datetime,date
+from datetime import timedelta
 
 try:
     from config import config
@@ -13,7 +14,15 @@ H=helpers()
 
 def groute(start,end,timet,mode="walking"):
     gmaps = googlemaps.Client(key=config.gmapsAPI)
-
+  
+    if mode=="transit":
+        today = datetime.today()
+        #last_monday = today - datetime.timedelta(days=today.weekday())
+        timet= today + timedelta( (4-today.weekday()) % 7 )
+  
+    print(timet)
+    #print("timet",str(int(timet.timestamp())))
+    #timet=(int(timet.timestamp()))
     # Geocoding an address
     #geocode_result = gmaps.geocode('1600 Amphitheatre Parkway, Mountain View, CA')
 
@@ -50,7 +59,8 @@ def groute(start,end,timet,mode="walking"):
 
 if __name__ == "__main__":
     now = datetime.now()
-    route=groute("42.3441206,-3.7297982","41.3617417,2.0952498",now,"transit")
+    print(now)
+    route=groute("41.4036521,2.1718907","41.3863801,2.1254988",now,"transit")
     print(route)
 
 #graphic representation:

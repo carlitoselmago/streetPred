@@ -110,6 +110,7 @@ class helpers():
 
 
     def buildPredictedHtml(self,center,texts,points,routes=False,name=""):
+        print("buildPredictedHtml name:",name)
         HTML="""
         <!DOCTYPE html><html lang="es">
 

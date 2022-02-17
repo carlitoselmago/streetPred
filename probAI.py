@@ -350,6 +350,15 @@ class probAI():
         #print("candidates",candidates)
         #transport=candidates.lasttransport.mode().values[0]
         print("transport unproccesed",transport)
+        print("distanceToDestination",distanceToDestination,"::::::::::::::::::::")
+        if distanceToDestination>20.0:
+            return "driving"
+
+        if distanceToDestination>5.0:
+            return "transit"
+
+        if transport=="walking":
+            return "walking"
 
         if transport=="bike":
             return "bicycling"
@@ -360,8 +369,9 @@ class probAI():
         if transport=="car":
             return "driving"
 
-        if distanceToDestination>5.0:
-            return "transit"
+       
+
+        
 
         return "walking"
 
@@ -376,11 +386,24 @@ class probAI():
 
     def getDateFromstring(self,stringdate):
         parts=stringdate.split(",")
-        return datetime(int(parts[0]),int(parts[1]),int(parts[2]))
+        try:
+            return datetime(int(parts[0]),int(parts[1]),int(parts[2]))
+        except:
+            print("date start not detected, using last time block!")
+            return False
 
     def predictBlocks(self,data,config):
 
         dateStart=self.getDateFromstring(config["date"])
+
+        if dateStart:
+            data_temp=data.copy()
+            data_temp=data_temp.rename(columns={'dayofmonth': 'day'})
+            data["date"]=  pd.to_datetime(data_temp[['year', 'month', 'day']],infer_datetime_format=True,errors='ignore')#pd.to_datetime((dataStr.year+dataStr.month+dataStr.dayofmonth),format='%Y%m%d')
+            data["date"]= pd.to_datetime(data["date"].astype(str),format='%Y%m%d',errors='coerce')
+            data = data[data.date < dateStart]
+            data.drop(["date"], axis = 1)
+
         numblocks=int(config["days"])*_DAYSPLIT
         self.historyData=data
         self.distanceParser=distanceParser()
@@ -415,14 +438,15 @@ class probAI():
             if abs(newRow["distancefromlast"])>0.001: #TODO: fix the abs trick
                 distanceToDestination=self.distanceParser.calcDistance((last["lat"],last["lon"]),(newRow["lat"],newRow["lon"]) )
                 transportMode=self.getSimilarTransportType(last["name"],newRow["name"],newRow["distancefromlast"],distanceToDestination)
-                #print("transportMode",transportMode)
+                print("transportMode",transportMode)
                 if transportMode:
                     route=groute(str(last["lat"])+","+str(last["lon"]),str(newRow["lat"])+","+str(newRow["lon"]),lastDatetime,transportMode)
+                    #print("route:::::",route)
                     routesTexts.append("<h4>TRANSPORT: "+transportMode+"</h4>")
 
             else:
                 route=False
-
+            #print("route check",route)
             if route:
 
                 newTime=lastDatetimeReal+timedelta(seconds=route[0]["legs"][0]["duration"]["value"])
@@ -445,7 +469,10 @@ class probAI():
                             routesTexts.append(l["html_instructions"])
                             if "steps" in l:
                                 for i in l["steps"]:
-                                    routesTexts.append(i["html_instructions"])
+                                    if "html_instructions" in i:
+                                        routesTexts.append(i["html_instructions"])
+                                    else:
+                                        pass
 
                     routesTexts.append(place)
             data=data.append(newRow,ignore_index=True)
@@ -556,6 +583,7 @@ class probAI():
 
     def inverseCategorical(self,inputs):
         return self.actle.inverse_transform(inputs)
+       
 
     def loadModel(self,name):
         return keras.models.load_model('models/'+name)
