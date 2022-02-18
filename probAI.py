@@ -42,7 +42,7 @@ from googleHistoryParser import _DAYSPLIT,catLocations, loadHistory
 class probAI():
     #using https://towardsdatascience.com/how-to-convert-pandas-dataframe-to-keras-rnn-and-back-to-pandas-for-multivariate-regression-dcc34c991df9
 
-    actTypes=15 #segun los datos hay 8 pero debería haber 6
+    actTypes=11 #segun los datos hay 8 pero debería haber 6
 
     lookbackLSTM=12
     batchSize=3
@@ -198,7 +198,7 @@ class probAI():
         model = keras.models.Sequential()
         model.add(keras.layers.LSTM(250, activation='relu', input_shape=(n_input, n_features), return_sequences=False))
         model.add(keras.layers.Dense(self.actTypes*2,  activation='relu'))
-        model.add(Dropout(0.2))
+        #model.add(Dropout(0.2))
         model.add(keras.layers.Dense(self.actTypes, activation='softmax'))
 
         model.compile(optimizer='adam', loss='categorical_crossentropy')

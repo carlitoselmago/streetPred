@@ -256,18 +256,19 @@ def parseHistory():
             bb=b
             bb["timeblock"]=i
             if bb["type"]!="-":
-                 bb["type"]="Oci"
-            if len(INDBLOCKS)>2:
-                if bb["timeblock"]==0 and bb["dayofweek"]==INDBLOCKS[i-1]["dayofweek"]:
-                    bb["dayofweek"]+=1
+                #bb["type"]="Oci"
+                if len(INDBLOCKS)>2:
+                    if bb["timeblock"]==0 and bb["dayofweek"]==INDBLOCKS[i-1]["dayofweek"]:
+                        bb["dayofweek"]+=1
 
-            INDBLOCKS.append(bb)
+                INDBLOCKS.append(bb)
             #print (bb)
 
     #print("")
     #print("TRAINBLOCKS")
     df = pd.DataFrame(INDBLOCKS)
-    print(df["type"].unique())
+    print("Unique act types:::::")
+    #print(df["type"].unique())
     #drop rows wich dont have a type category
     df.dropna(subset=['type'], inplace=True)
     

@@ -33,8 +33,8 @@ if not os.path.isdir("models/probAct"):
     #sys.exit()
     #plt.plot(dataset["dayofweek"])
     #plt.show()
-    print(dataset)
-    AI.actTrain(dataset,95)
+    #print(dataset)
+    AI.actTrain(dataset,250)
 else:
 
     print("loading pretrained actTrain")
